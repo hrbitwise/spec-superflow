@@ -28,6 +28,10 @@ jobs:
       - run: npm test
       - name: Check version consistency
         run: node scripts/check-version-consistency.mjs
+      - name: Check skill ↔ CLI consistency
+        # 硬门禁（退出码非零即失败）：skill 文档引用的子命令/flag/asset/阈值
+        # 必须与 CLI 源码一致，防止引擎演化后 skill 静默过期。
+        run: node scripts/spec-superflow.mjs doctor skills
       - name: CLI smoke
         run: |
           node scripts/spec-superflow.mjs doctor
