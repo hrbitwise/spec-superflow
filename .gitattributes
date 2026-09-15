@@ -1,3 +1,11 @@
+# Normalize all text files to LF in both the index and the working tree.
+# The plugin ships to 9 platforms and its bash hook must run under POSIX shells;
+# CRLF checkouts on Windows also produced whole-file `git status` noise after
+# `npm run build` (stat-dirty dist files), which trains maintainers to ignore
+# real working-tree changes. This repository contains no .bat/.cmd/.ps1 files
+# that require CRLF.
+* text=auto eol=lf
+
 # Force LF line endings for the bash hook script. A CRLF checkout would break
 # `bash hooks/session-start` on Windows (the `\r` before `then`/`fi`/`elif` can
 # cause syntax errors), and the installer copies it verbatim without normalizing.
