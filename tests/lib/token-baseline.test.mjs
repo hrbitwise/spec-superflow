@@ -3,7 +3,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { writeFileSync, unlinkSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -65,7 +65,9 @@ describe('token-baseline: comparison', () => {
   });
 
   it('missing file in baseline reports error', () => {
-    const out = execSync(`node "${BASELINE_PATH}" --files hooks/session-start --compare /nonexistent/baseline.json 2>&1 || true`, { encoding: 'utf-8' });
+    // spawnSync 直接收集 stdout/stderr，避免依赖 shell 的 `2>&1 || true` 语法（cmd 不支持）。
+    const result = spawnSync('node', [BASELINE_PATH, '--files', 'hooks/session-start', '--compare', '/nonexistent/baseline.json'], { encoding: 'utf-8' });
+    const out = (result.stdout || '') + (result.stderr || '');
     // Should fail gracefully — error message from file not found
     assert.ok(out.length > 0, 'should produce output even on error');
   });

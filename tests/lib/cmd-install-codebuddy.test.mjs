@@ -3,10 +3,15 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
+
+// hooks/session-start 是 bash 脚本；本地 Windows 环境若无 bash 则跳过，
+// CI windows-latest runner 自带 Git Bash 不受影响。
+const hasBash = !spawnSync('bash', ['--version'], { stdio: 'ignore' }).error;
+const skipNoBash = hasBash ? false : 'bash not available on this machine';
 
 // Windows-safe dynamic import: bare Windows paths (D:\...) are not valid ESM
 // import specifiers, so convert to a file:// URL. No-op on POSIX.
@@ -281,7 +286,7 @@ describe('cmd-install-codebuddy', () => {
 describe('hooks/session-start output format', () => {
   const scriptPath = join(process.cwd(), 'hooks', 'session-start');
 
-  it('outputs hookSpecificOutput under CODEBUDDY_PROJECT_DIR', () => {
+  it('outputs hookSpecificOutput under CODEBUDDY_PROJECT_DIR', { skip: skipNoBash }, () => {
     const out = execFileSync('bash', [scriptPath], {
       env: { ...process.env, CODEBUDDY_PROJECT_DIR: '/tmp/cb-project' },
     }).toString();
@@ -290,7 +295,7 @@ describe('hooks/session-start output format', () => {
     assert.match(out, /"additionalContext"/);
   });
 
-  it('falls back to top-level additionalContext when no platform env is set', () => {
+  it('falls back to top-level additionalContext when no platform env is set', { skip: skipNoBash }, () => {
     const { PATH = '' } = process.env;
     const out = execFileSync('bash', [scriptPath], {
       env: { PATH },
