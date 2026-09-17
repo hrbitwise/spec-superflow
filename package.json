@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "ssf": "./scripts/spec-superflow.mjs",
-    "spec-superflow": "./scripts/spec-superflow.mjs"
+    "ssf": "scripts/spec-superflow.mjs",
+    "spec-superflow": "scripts/spec-superflow.mjs"
   },
   "type": "module",
   "scripts": {
@@ -37,7 +37,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MageByte-Zero/spec-superflow"
+    "url": "git+https://github.com/MageByte-Zero/spec-superflow.git"
   },
   "engines": {
     "node": ">=20"
