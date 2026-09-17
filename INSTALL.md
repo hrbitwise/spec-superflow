@@ -530,6 +530,60 @@ mkdir -p ~/.trae/skills
 cp -R spec-superflow/skills/* ~/.trae/skills/
 ```
 
+### 让 CLI 可用（推荐）
+
+Trae 的安装方式**只复制 skill 文本**到 `.trae/skills/` 或 `~/.trae/skills/`，**不部署仓库的 `scripts/` 目录**。但 spec-superflow 的每个 skill 里每一步都会调用 `ssf` CLI（状态初始化、执行计划、review、checkpoint 等）。没有 CLI，智能体读到指令后会在 shell 里报 `command not found`，整条链路就断了。
+
+三种方式让 `ssf` 命令可用，按推荐顺序排列：
+
+#### 方式 1：`npm link`（一次设置，全局可用）
+
+把仓库注册为全局 `ssf` 命令。之后在 Trae 里任何项目都能直接敲 `ssf xxx`。
+
+```bash
+# macOS / Linux / WSL
+cd /path/to/spec-superflow
+npm link
+```
+
+```powershell
+# Windows PowerShell / CMD（Trae CN 的主流环境）
+cd d:\path\to\spec-superflow
+npm link
+```
+
+验证：
+
+```bash
+ssf --version
+ssf doctor skills     # 核对当前 skills 与 CLI 是否一致；CI 也跑这条
+```
+
+#### 方式 2：PATH 追加（临时或持久化）
+
+不想改全局链接，把仓库的 `scripts/` 目录加进 PATH：
+
+```powershell
+# Windows PowerShell（当前会话有效；要持久化请写入 $PROFILE）
+$env:PATH = "d:\path\to\spec-superflow\scripts;$env:PATH"
+```
+
+```bash
+# macOS / Linux（写进 ~/.bashrc 或 ~/.zshrc 持久化）
+export PATH="/path/to/spec-superflow/scripts:$PATH"
+```
+
+#### 方式 3：直接调用 node（零配置）
+
+不想动 PATH，直接让 Trae 执行完整命令：
+
+```powershell
+# 每次用全路径，不需要任何安装步骤
+node d:\path\to\spec-superflow\scripts\spec-superflow.mjs doctor skills
+```
+
+> **symlink 替代复制**：如果你不想每次升级都手动 `cp -R skills/*`，可以把 `.trae/skills/` 做成指向 `<repo>/skills` 的符号链接——macOS/Linux 用 `ln -s ../spec-superflow/skills .trae/skills`，Windows 用 `mklink /D .trae\skills d:\path\to\spec-superflow\skills`。升级只需 `git pull` 一次。
+
 ### 升级
 
 ```bash
@@ -537,9 +591,14 @@ cd /path/to/spec-superflow && git pull
 cp -R skills/* ~/.trae/skills/
 ```
 
+如果用了 symlink 替代复制，跳过 `cp` 那行即可。**`npm link` 不需要重新执行**——git pull 拉下来的是同一个路径，`ssf` 命令会自动指向最新代码；只有当 `package.json` 的 `bin` 字段变更时才需要重新 link。
+
 ### 卸载
 
 ```bash
+# 如果用过 npm link，先注销全局命令
+cd /path/to/spec-superflow && npm unlink
+
 rm -rf .trae/skills/
 rm -rf ~/.trae/skills/
 ```
