@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
-  <a href="https://github.com/MageByte-Zero/spec-superflow/stargazers"><img src="https://img.shields.io/github/stars/MageByte-Zero/spec-superflow" alt="GitHub Stars"></a>
+  <a href="https://github.com/hrbitwise/spec-superflow/stargazers"><img src="https://img.shields.io/github/stars/hrbitwise/spec-superflow" alt="GitHub Stars"></a>
   <a href="https://www.npmjs.com/package/spec-superflow"><img src="https://img.shields.io/npm/v/spec-superflow" alt="npm version"></a>
 </p>
 
@@ -44,7 +44,7 @@ The agent inspects your current artifacts, performs **content-level detection** 
 Claude Code's primary installation path is the plugin marketplace:
 
 ```bash
-/plugin marketplace add MageByte-Zero/spec-superflow
+/plugin marketplace add hrbitwise/spec-superflow
 /plugin install spec-superflow@spec-superflow
 /plugin update spec-superflow@spec-superflow   # upgrade
 ```
@@ -55,7 +55,7 @@ Claude Code's primary installation path is the plugin marketplace:
 npx spec-superflow@latest install-cursor
 
 # Or run the installer directly:
-curl -fsSL https://raw.githubusercontent.com/MageByte-Zero/spec-superflow/main/scripts/install-cursor.mjs | node -
+curl -fsSL https://raw.githubusercontent.com/hrbitwise/spec-superflow/main/scripts/install-cursor.mjs | node -
 ```
 
 Cursor discovers `.cursor/skills/`, `.agents/skills/`, `~/.cursor/skills/`, and compatible Claude/Codex skill directories. You can also import a GitHub repo from Customize → Rules → Remote Rule (Github).
@@ -80,14 +80,14 @@ In the Codex app, open **Plugins** and install or enable `spec-superflow`. If in
 ### GitHub Copilot CLI
 
 ```bash
-copilot plugin marketplace add MageByte-Zero/spec-superflow
+copilot plugin marketplace add hrbitwise/spec-superflow
 copilot plugin install spec-superflow@spec-superflow
 ```
 
 ### Gemini CLI
 
 ```bash
-gemini extensions install https://github.com/MageByte-Zero/spec-superflow
+gemini extensions install https://github.com/hrbitwise/spec-superflow
 gemini extensions update spec-superflow   # upgrade
 ```
 

@@ -37,7 +37,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MageByte-Zero/spec-superflow.git"
+    "url": "git+https://github.com/hrbitwise/spec-superflow.git"
   },
   "engines": {
     "node": ">=20"

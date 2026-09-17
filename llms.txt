@@ -40,7 +40,7 @@ Current version: v1.2.1.
 ## Installation
 See INSTALL.md for platform-specific instructions. Quick install for Claude Code:
 ```
-/plugin marketplace add MageByte-Zero/spec-superflow
+/plugin marketplace add hrbitwise/spec-superflow
 /plugin install spec-superflow@spec-superflow
 ```
 

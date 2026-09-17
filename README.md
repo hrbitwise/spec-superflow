@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
-  <a href="https://github.com/MageByte-Zero/spec-superflow/stargazers"><img src="https://img.shields.io/github/stars/MageByte-Zero/spec-superflow" alt="GitHub Stars"></a>
+  <a href="https://github.com/hrbitwise/spec-superflow/stargazers"><img src="https://img.shields.io/github/stars/hrbitwise/spec-superflow" alt="GitHub Stars"></a>
   <a href="https://www.npmjs.com/package/spec-superflow"><img src="https://img.shields.io/npm/v/spec-superflow" alt="npm version"></a>
 </p>
 
@@ -44,7 +44,7 @@ Agent 会自动检查当前工件目录，**内容级判断**（不看文件时�
 Claude Code 的主流方式是插件 marketplace：
 
 ```bash
-/plugin marketplace add MageByte-Zero/spec-superflow
+/plugin marketplace add hrbitwise/spec-superflow
 /plugin install spec-superflow@spec-superflow
 /plugin update spec-superflow@spec-superflow
 ```
@@ -58,7 +58,7 @@ Marketplace 安装自动加载 hooks，每次新会话自动注入上下文。
 npx spec-superflow@latest install-cursor
 
 # 方式二：直接运行脚本
-curl -fsSL https://raw.githubusercontent.com/MageByte-Zero/spec-superflow/main/scripts/install-cursor.mjs | node -
+curl -fsSL https://raw.githubusercontent.com/hrbitwise/spec-superflow/main/scripts/install-cursor.mjs | node -
 ```
 
 > Cursor 原生发现 `.cursor/skills/`、`.agents/skills/`、`~/.cursor/skills/` 等目录，也可以在 Customize → Rules → Remote Rule (Github) 导入。脚本会自动部署 skills、scripts、docs 等运行时依赖。
@@ -77,7 +77,7 @@ codex plugin marketplace add hashgraph-online/awesome-codex-plugins
 codex plugin add spec-superflow@awesome-codex-plugins
 
 # 直接从指定 release tag 安装（不等待社区镜像同步）
-codex plugin marketplace add MageByte-Zero/spec-superflow --ref v1.2.1
+codex plugin marketplace add hrbitwise/spec-superflow --ref v1.2.1
 codex plugin add spec-superflow@spec-superflow
 
 # 升级并验证社区 marketplace 安装
@@ -93,14 +93,14 @@ Codex App 打开 **Plugins** 面板，安装或启用 `spec-superflow`。通过 
 ### GitHub Copilot CLI
 
 ```bash
-copilot plugin marketplace add MageByte-Zero/spec-superflow
+copilot plugin marketplace add hrbitwise/spec-superflow
 copilot plugin install spec-superflow@spec-superflow
 ```
 
 ### Gemini CLI
 
 ```bash
-gemini extensions install https://github.com/MageByte-Zero/spec-superflow
+gemini extensions install https://github.com/hrbitwise/spec-superflow
 gemini extensions update spec-superflow   # 升级
 ```
 

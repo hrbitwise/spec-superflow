@@ -111,7 +111,7 @@ For each example in `docs/examples/`:
 
   ```bash
   node scripts/verify-marketplace-release.mjs \
-    --manifest-url https://raw.githubusercontent.com/hashgraph-online/awesome-codex-plugins/main/plugins/MageByte-Zero/spec-superflow/.codex-plugin/plugin.json \
+    --manifest-url https://raw.githubusercontent.com/hashgraph-online/awesome-codex-plugins/main/plugins/hrbitwise/spec-superflow/.codex-plugin/plugin.json \
     --expected-version <semver>
   ```
 
