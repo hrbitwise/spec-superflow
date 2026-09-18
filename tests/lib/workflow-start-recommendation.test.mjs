@@ -107,6 +107,21 @@ describe('workflow-start path recommendation protocol', () => {
     assert.ok(protocolErrors(missingWhy).includes('missing Why'));
   });
 
+  it('keeps bearing-fact assumption scrutiny inside the same-turn intake', () => {
+    const skill = read('skills/workflow-start/SKILL.md');
+    const intake = skill.match(/## Direct Short-Path Intake[\s\S]*?(?=## DP-0)/)?.[0] ?? '';
+
+    assert.match(intake, /### Bearing-Fact Assumption Display/);
+    // 三个承重型事实必须被点名，且推断不得静默认证
+    for (const fact of ['uncertainty', 'behavioral_constraint_change', 'cross_module_change']) {
+      assert.match(intake, new RegExp(fact));
+    }
+    // 不得新增问答轮次：同轮 verification 选择即假设确认
+    assert.match(intake, /never add a question round/i);
+    // 事实翻转后不允许在旧事实上 accept，必须刷新推荐并把选择权留给用户
+    assert.match(intake, /refresh `ssf workflow recommend`[\s\S]*show Quick and Full/i);
+  });
+
   it('documents intake selection separately from DP-4 execution mode', () => {
     const decisions = read('docs/decision-points.md');
 

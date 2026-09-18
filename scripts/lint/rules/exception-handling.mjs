@@ -10,7 +10,8 @@ const REQUIRED_EXCEPTION_PATTERNS = [
   },
   {
     id: 'missing-files',
-    patterns: [/文件缺失|file (not found|missing)|missing (file|artifact)/i],
+    // “missing templates”（spec-writer 的模板缺失回退）与具体文件缺失同义，纳入匹配
+    patterns: [/文件缺失|file (not found|missing)|missing (file|artifact|templates?)/i],
     message: 'No guidance for missing file/artifact scenarios',
   },
   {
@@ -20,7 +21,9 @@ const REQUIRED_EXCEPTION_PATTERNS = [
   },
   {
     id: 'validation-failure',
-    patterns: [/验证失败|validation (fail|error)|check fail/i],
+    // 本项目 release-archivist 的验证失败是 DP-6 “Verification Outcome” 节
+    // （含 “If FAIL” 分支），与 validation failure 同义，一并识别以免因同义词差异误报
+    patterns: [/验证失败|validation (fail|error)|verification (fail|failure|error|outcome)|check fail/i],
     message: 'No guidance for validation failure scenarios',
   },
 ];

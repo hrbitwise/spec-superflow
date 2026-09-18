@@ -35,6 +35,16 @@ Every requirement must be testable. Use SHALL or MUST. Every requirement must ha
 ### design.md
 Must have: relevant facts and constraints, goals and non-goals, decisions (Choice + Rationale + Alternatives + Consequences), and risks with verification evidence. Do not invent stakeholders, migration steps, or open questions when they do not affect the decision.
 
+### design.md Decisions — Red-Team Before Recording
+
+Pressure-test every Decision before writing it; record the answers inside the existing Decision fields, not a new section:
+
+- **Alternatives**: state the evidence that disqualifies each rejected alternative. A bare verdict (“simpler”, “better”) with no support is not a rationale.
+- **Consequences**: label each consequence as evidence-backed or inferred; an inference is acceptable only when its assumption is named.
+- **Risks**: every risk links to a mitigation and to verification evidence.
+
+“It's probably fine” is a STOP signal — the same evidence standard as bug-investigator's “It's probably X”. If a field cannot be filled without inventing facts, first seek evidence in the repository or label the inference with its named assumption. Ask the user only when the gap meets the Artifact Generation pause conditions above; remain in specifying — do not route back to need-explorer or reopen DP-1.
+
 ### tasks.md
 Must include a delivery/proof map and dependency-aware tasks. Each task names the affected path or bounded area, the observable outcome, and the evidence command. Keep RED/GREEN details, review receipts, and dispatch mechanics in the execution contract/task brief; do not inflate reader-facing tasks into five ritual substeps.
 
@@ -51,7 +61,7 @@ When DP-0 has made the scope clear, generate the configured planning pack (propo
 - SHALL/MUST for required behavior, `#### Scenario:` with WHEN/THEN per requirement, grouped under delta headers, no contradictions
 
 ### design.md
-- facts/constraints, goals/non-goals, `## Decisions` (≥1, with Choice+Rationale+Alternatives+Consequences), risks and verification
+- facts/constraints, goals/non-goals, `## Decisions` (≥1, with Choice+Rationale+rejected-Alternative evidence+Consequences labeled evidence/inferred), risks linked to mitigation and verification; no unsupported verdict words or unlabeled inferences
 
 ### tasks.md
 - delivery/proof map, numbered tasks, affected paths or bounded areas, observable outcomes, no placeholders, every requirement mapped, explicit dependencies
@@ -61,7 +71,7 @@ When DP-0 has made the scope clear, generate the configured planning pack (propo
 
 ## DP-2: Artifact Review Gate
 
-Present a concise summary of all 4 artifacts, then ask one DP-2 question for material adjustments. For Full changes, run one independent five-question blind reader check (problem, command boundary, invalidation boundary, continuation boundary, and document flow) before recording approval; repair only answers the reader cannot derive. After approval:
+Present a concise summary of all 4 artifacts, then ask one DP-2 question for material adjustments. For Full changes, run one independent five-question blind reader check (problem, command boundary, invalidation boundary, continuation boundary, and document flow) before recording approval; repair only answers the reader cannot derive. An unfilled red-team field — a rejected Alternative with no disqualifying evidence, a Consequence with no evidence/inferred label, or a Risk with no linked mitigation and verification evidence — is a repair item the reader must catch. After approval:
 ```bash
 ssf state set <change-dir> dp_2_result "approved: <summary>"
 ssf state set <change-dir> dp_2_timestamp now

@@ -16,24 +16,9 @@ Check workflow mode and receipt first. Tweak → direct edit mode. Quick or a va
 Branch/worktree preflight before ANY implementation edit — **workflow-aware**:
 
 **Full / legacy Hotfix — isolation mandatory (do not skip):**
-1. Run the isolation check:
-   ```bash
-   ssf isolate <change-dir>
-   ```
-   This script enforces git isolation: if you are on `main`/`master` it creates a
-   git worktree (preferred) or a new branch, and exits non-zero if it cannot and you
-   have not approved `--force`.
-2. If `ssf isolate` exits non-zero: STOP. Do not edit `main`/`master` in place.
-   Ask the user for explicit approval (and re-run with `ssf isolate <change-dir> --force`
-   only after they approve). A non-zero exit also covers a failed submodule
-   initialization after the isolation context was created — never implement on a
-   half-initialized worktree.
-3. If it succeeds, report the chosen branch/worktree and make all implementation
-   edits there. `ssf isolate` also recursively initializes submodules in the new
-   isolation context when a `.gitmodules` exists, and appends a cwd-persistence
-   warning (isolation path + mandatory `cd` prefix rule) to
-   `<change-dir>/.superpowers/sdd/progress.md` so later Bash calls do not silently
-   edit the trunk.
+1. Run `ssf isolate <change-dir>`. On `main`/`master` it creates a git worktree (preferred) or a new branch, and exits non-zero unless it can isolate or you approve `--force`.
+2. Non-zero exit: STOP — never edit `main`/`master` in place. Ask for explicit approval and re-run `ssf isolate <change-dir> --force` only after approval. A non-zero exit also covers failed submodule initialization after the context was created — never implement on a half-initialized worktree.
+3. Success: report the chosen branch/worktree and make all edits there. When a `.gitmodules` exists, submodules are recursively initialized, and a cwd-persistence warning (isolation path + mandatory `cd` prefix) is appended to `<change-dir>/.superpowers/sdd/progress.md` so later calls do not silently edit the trunk.
 4. Closure (including `ssf finish <change-dir>` for Full/legacy Hotfix) is owned by release-archivist — route there after review passes.
 
 **Quick / direct Hotfix / Tweak / lightweight — skip isolation, edit directly on the current branch.** Rationale: no recordReview (R4 never fires), no `ssf finish` merge, no wave receipts — a worktree would be dead weight. For sensitive scenarios requiring manual isolation, run `ssf isolate <change-dir> --force` explicitly.
@@ -69,24 +54,12 @@ For Quick/direct Hotfix, stop instead of creating or rewinding a contract; refre
 
 ## Controller Continuity Protocol
 
-This protocol is a host controller responsibility. The skill does not create autonomous background execution, retain control after a host turn ends, or guarantee that a dispatched subtask continues without the host.
+This protocol is a host controller responsibility: the skill does not create autonomous background execution, retain control after a host turn ends, or guarantee that a dispatched subtask continues without the host.
 
-- While an active subtask exists or a planned wave has a pending wave receipt,
-  the controller remains in execution. Send only concise commentary progress;
-  do not send a final response or end the control turn as though the change
-  were waiting for the user.
-- On a user interruption or resume, first read `ssf execution show <change-dir>
-  --json` and the progress ledger at `.superpowers/sdd/progress.md`. Reconcile
-  those records before dispatching anything, then continue the current eligible
-  repair or eligible task according to the persisted plan. Do not restart a
-  completed task, skip a retryable repair, or infer completion from chat text.
-- A controller may end its control turn or request user input only when the
-  change is completed, an external blocker prevents meaningful progress, or
-  user authorization is genuinely required. A dispatched task, pending review,
-  or routine internal transition is not a terminal condition.
-- Commentary must state the current wave/task, evidence or receipt status, and
-  the automatic next gate. It must not imply that the skill itself will run in
-  the background after the host has ended the turn.
+- While an active subtask exists or a planned wave has a pending wave receipt, remain in execution: send only concise commentary, and do not send a final response as though waiting for the user.
+- On user interruption or resume, first read `ssf execution show <change-dir> --json` and the `.superpowers/sdd/progress.md` ledger; reconcile both before dispatching, then continue the current eligible repair or eligible task per the persisted plan. Do not restart completed work, skip a retryable repair, or infer completion from chat text.
+- End the control turn or request user input only when the change is completed, an external blocker prevents meaningful progress, or user authorization is genuinely required. A dispatched task, pending review, or routine internal transition is not a terminal condition.
+- Commentary states the current wave/task, evidence or receipt status, and the automatic next gate; it must not imply background execution after the host ends the turn.
 
 ## Planning-document boundary
 
@@ -153,59 +126,21 @@ For Full/legacy Hotfix by default. Dispatch according to the persisted plan, rev
 
 ### Repair and focused re-review protocol
 
-Before dispatching any repair, read `ssf execution show <change-dir> --json` and
-use the CLI-provided `waves[].repair` state together with `eligible` and
-`retryable`. The controller does not infer a repair round from filenames or
-history, and must not write, edit, or modify a repair-state file directly.
+Dispatch no repair before reading `ssf execution show <change-dir> --json`: use the CLI-provided `waves[].repair` state together with `eligible` and `retryable`. Never infer a repair round from filenames or history, and do not write, edit, or modify a repair-state file directly.
 
-- **Rounds 1–2 — recovery:** dispatch only the focused repair for the current
-  wave. Give the implementer the CLI repair round, previous review report, and
-  the prior review head. Generate a scoped diff from that head, then dispatch
-  the `re-review-prompt.md` reviewer against the prior finding and that scoped
-  diff. Do not redispatch dependent waves.
-- **Third unresolved failure — stop:** the third unresolved receipt yields CLI
-  status `adjudication-required`. Stop automatic dispatch and request a human
-  adjudication rather than attempting a fourth repair.
-- After human review, record the decision with `ssf execution adjudicate
-  <change-dir> --wave <id> --decision allow-review --confirm --reason <text>`.
-  It authorizes one continuous review only, never a pass; a failed authorized
-  review returns to `adjudication-required`.
-- Every focused re-review still writes its separate persisted report and is
-  recorded only through `ssf execution review <change-dir> --wave <id> --base
-  <sha> --head <sha> --report .superpowers/sdd/reviews/<wave-id>-rereview.md --verdict <pass|fail>`.
-  A replacement `pass` receipt is the only evidence that resolves the wave.
+- **Rounds 1–2 — recovery:** dispatch only the focused repair for the current wave. Give the implementer the CLI repair round, previous review report, and prior review head; generate a scoped diff from that head, then dispatch the `re-review-prompt.md` reviewer against the prior finding and that scoped diff. Do not redispatch dependent waves.
+- **Third unresolved failure — stop:** the third unresolved receipt yields CLI status `adjudication-required`. Stop automatic dispatch and request human adjudication rather than attempting a fourth repair. After human review, record it with `ssf execution adjudicate <change-dir> --wave <id> --decision allow-review --confirm --reason <text>`; it authorizes one continuous review only, never a pass, and a failed authorized review returns to `adjudication-required`.
+- Every focused re-review writes its separate persisted report, recorded only through `ssf execution review <change-dir> --wave <id> --base <sha> --head <sha> --report .superpowers/sdd/reviews/<wave-id>-rereview.md --verdict <pass|fail>`. A replacement `pass` receipt is the only evidence that resolves the wave.
 
 ### Per-Task Loop
 1. **Dispatch implementer**: Load the template with `ssf runtime asset read skills/build-executor/implementer-prompt.md`. Extract task brief with `scripts/task-brief PLAN_FILE N`. Include: where task fits, brief path, interfaces from prior tasks, report file path.
-2. **Handle response**: DONE → generate review package + dispatch reviewer.
-   DONE_WITH_CONCERNS → assess. For NEEDS_CONTEXT, BLOCKED, or another
-   unresolved failure, append `Task N: failed attempt X/3 — <reason>` to the
-   existing progress ledger. Retry only when the controller can name new
-   evidence, new context, or a specific strategy change. The retry brief contains
-   the prior failure reason, the single objective, and the necessary file paths;
-   do not repeat the planning pack or conversation history. After
-   the third unresolved failure, stop automatic dispatch, enter DP-5, and ask
-   the user for a decision.
+2. **Handle response**: DONE → generate review package + dispatch reviewer; DONE_WITH_CONCERNS → assess. For NEEDS_CONTEXT, BLOCKED, or another unresolved failure, append `Task N: failed attempt X/3 — <reason>` to the progress ledger. Retry only when the controller can name new evidence, new context, or a specific strategy change; the retry brief contains the prior failure reason, the single objective, and the necessary file paths — never repeat the planning pack or conversation history. After the third unresolved failure, stop automatic dispatch, enter DP-5, and ask the user for a decision.
 3. **Review**: Load `ssf runtime asset read skills/build-executor/task-reviewer-prompt.md`. Reviewer returns spec compliance + code quality verdicts with the wave ID, git range, report path, and `pass`/`fail` receipt command.
-4. **Fix**: If Critical or Important issues, write the `fail` receipt, read the
-   CLI repair state, then dispatch only the focused repair and re-review path
-   permitted by the repair protocol above. Write the replacement `pass` receipt
-   only after that re-review passes.
+4. **Fix**: On Critical or Important issues, write the `fail` receipt, read the CLI repair state, then dispatch only the focused repair and re-review path permitted above. Write the replacement `pass` receipt only after that re-review passes.
 5. **Mark complete**: Append to `.superpowers/sdd/progress.md`: `Task N: complete (commits <base7>..<head7>, review clean)`
 
 ### Model Selection
-Use the configured profile that matches the task role. Resolve it before dispatch:
-
-```bash
-ssf runtime config --resolve-model <profile>
-```
-
-| Profile | Role |
-|---|---|
-| `mechanical` | Cheap, routine edits |
-| `standard` | Integration and judgment work |
-| `strong` | Architecture, design, and final review |
-| `review` | Review that matches the diff |
+Use the configured profile matching the task role; resolve before dispatch with `ssf runtime config --resolve-model <profile>`. Profiles: `mechanical` (cheap routine edits), `standard` (integration and judgment work), `strong` (architecture, design, and final review), `review` (review matching the diff).
 
 For platforms whose dispatch supports a `model` field, explicitly pass the resolved `model` value. If the result is `configured: false`, automatic selection is unavailable: do not invent a provider model and do not bypass the existing requirement to specify `model` explicitly. Resolution only reads configuration; it does not switch models.
 
@@ -261,32 +196,21 @@ For Full or legacy Hotfix, do not report completion until tests pass, contract o
 ## Standard User-Facing Handoff
 
 End every user-facing phase report with this concise handoff. Only a successfully
-persisted `closing` state and `abandoned` are terminal.
+persisted `closing` state and `abandoned` are terminal. Each report states Current
+stage, Completed / blocker, Next stage, and Entry condition.
 
 ### Normal report
-
-- Current stage: `<detected workflow stage>`.
-- Completed / blocker: `<completed work>`.
-- Next stage: `<next workflow stage or skill>`.
-- Entry condition: `<what must be true to enter it>`.
+- Current stage: `<detected workflow stage>`. Completed / blocker: `<completed work>`.
+- Next stage: `<next workflow stage or skill>`. Entry condition: `<what must be true to enter it>`.
 
 ### Blocked report
-
-- Current stage: `<detected workflow stage>`.
-- Completed / blocker: `<blocking fact or missing evidence>`.
-- Next stage: `<stage that resumes after the blocker>`.
-- Entry condition: `<the approval, artifact, validation, or fix required>`.
+- Current stage: `<detected workflow stage>`. Completed / blocker: `<blocking fact or missing evidence>`.
+- Next stage: `<stage that resumes after the blocker>`. Entry condition: `<the approval, artifact, validation, or fix required>`.
 
 ### Approval-wait report
-
-- Current stage: `<detected workflow stage>`.
-- Completed / blocker: `<work ready for the named decision>`.
-- Next stage: `<stage that follows approval>`.
-- Entry condition: `<explicit user approval or recorded decision>`.
+- Current stage: `<detected workflow stage>`. Completed / blocker: `<work ready for the named decision>`.
+- Next stage: `<stage that follows approval>`. Entry condition: `<explicit user approval or recorded decision>`.
 
 ### Successful terminal report
-
-- Current stage: successfully persisted `closing` or `abandoned`.
-- Completed / blocker: `<persisted terminal outcome>`.
-- Next stage: `none`.
-- Entry condition: no further transition exists.
+- Current stage: successfully persisted `closing` or `abandoned`. Completed / blocker: `<persisted terminal outcome>`.
+- Next stage: `none`. Entry condition: no further transition exists.

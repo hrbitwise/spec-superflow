@@ -70,6 +70,7 @@ Output sync report table: Capability, ADDED/MODIFIED/REMOVED/RENAMED counts, Sta
 
 - **Parse failures**: Report file and section. Do not attempt partial merges.
 - **No deltas**: If change has no delta sections, report nothing to merge and exit cleanly.
+- **Missing artifact**: A delta spec referenced by the change is missing or unreadable (distinct from a legal empty "no deltas" change): report the capability and path, write no target, and route back upstream to restore the file before syncing.
 - **User interruption**: On resume, check for merge conflict markers before proceeding.
 
 ## Standard User-Facing Handoff

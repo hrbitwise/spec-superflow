@@ -6,8 +6,24 @@ The format loosely follows Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-18
+
+### Added
+
+- **Bearing-fact assumption scrutiny on short-path intake**: workflow-start's Direct Short-Path Intake now surfaces the riskiest self-certified facts for Quick and direct Hotfix. When `uncertainty`, `behavioral_constraint_change`, or `cross_module_change` has no concrete evidence in the request or repository, the same-turn Observed/Why display states the inferred value, what breaks if it is wrong, and the evidence searched (found or absent). No question round is added — the user's same-turn verification choice (`tdd`/`new-test`/`bounded`) confirms the assumptions — and a flipped fact refreshes `ssf workflow recommend` and returns the Quick-vs-Full choice to the user instead of auto-escalating.
+- **Design-decision red-team self-check in spec-writer**: every `design.md` Decision is now pressure-tested before recording. Rejected Alternatives require disqualifying evidence (bare verdicts such as "simpler"/"better" are rejected), Consequences must be labeled evidence-backed or inferred (an inference names its assumption), and Risks must link to mitigation and verification evidence. Answers fill the existing Decision fields rather than a new section; gaps are resolved from the repository or a named assumption, pausing for the user only under the existing artifact-generation conditions while staying in `specifying`; unfilled red-team fields are explicit repair items in the DP-2 blind-reader check.
+- **Missing-artifact guidance in spec-merger**: Exception Handling now covers a delta spec that is referenced but missing or unreadable — report the capability and path, write no target, and route back upstream to restore the file — explicitly distinguished from a legal empty "no deltas" change, which still exits cleanly.
+- **Option-presentation contract in need-explorer**: multiple-choice questions and approach comparisons now follow a presentation contract — plain language, same-altitude mutually exclusive options, a marked evidence-backed default, per-option wrongness cost and reversibility, and a three-option ceiling; approaches are compared on one shared dimension frame (scope, risk, fallback, follow-up cost) with rejected-alternative reasons, a concrete scenario walkthrough, and an escape condition. When the user cannot evaluate an option, the agent must ask the prerequisite question first instead of re-explaining the same jargon menu; a new "user does not understand" exception forbids repeating the menu verbatim and requires descending one level.
+
+### Changed
+
+- **Skill character budget raised to 20000**: `MAX_CHARS_PER_SKILL` is raised from 10000 to 20000 characters; the 250-line limit remains the hard error ceiling. The old 10K threshold predated the state-machine expansion and forced the two controller skills toward deleting complete CLI flags and boundary rules.
+- **Token-efficiency compression of controller skills**: workflow-start (271 → 242 lines) and build-executor (293 → 217 lines) were compressed to meet the 250-line hard limit without changing workflow semantics — all CLI flags, guards, adjudications, isolation rules, and regex-backed routing contracts are preserved; the repeated handoff template across both files was tightened.
+
 ### Fixed
 
+- **Windows lint false-green**: `lint-skills.mjs` passed Windows paths (e.g. `d:\...`) directly to dynamic `import()`, which only accepts `file://` URLs; every rule failed to load, was swallowed by the loader's catch, and the script still reported "0 issues". Both loaders now convert paths with `pathToFileURL`, and a new regression test runs both lint modes in a child process to fail loudly if rules stop loading.
+- **False exception-handling warnings from synonym gaps**: the rule now recognizes "missing templates" (spec-writer's template fallback) and DP-6 "verification outcome/failure" wording (release-archivist's verification gate) instead of only the literal words "validation failure"; genuinely missing guidance is still detected.
 - **Windows-compatible decision-point timestamps (#117)**: `ssf state set <change-dir> dp_N_timestamp now` now generates the UTC ISO timestamp inside the Node.js CLI, and all skills use that cross-platform form instead of POSIX `date` command substitution.
 - **Planless debugging for lightweight paths (#117)**: Quick, Tweak, lightweight, and direct Hotfix may record evidence-backed debug attempts and DP-5 escalation without an execution plan when their workflow receipt is valid; the ledger is sealed to the receipt's stable authorization identity, while Full and legacy Hotfix retain the current-plan requirement.
 - **Accurate Codex hook guidance (#117)**: the platform matrix and installation docs now match the Codex manifest's explicit `hooks: {}` suppression and tell users to invoke `workflow-start` in new sessions.

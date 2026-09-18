@@ -19,11 +19,7 @@ Do NOT invoke for: general coding tasks outside spec-superflow changes, casual q
 
 ## Terminal-State Short Circuit
 
-Before update checks or recovery overlays, inspect the persisted state. If it is
-`closing`, stop immediately: `closing` is a successful terminal state and the
-next skill is `none`. Report the terminal state and its persisted evidence.
-Do not run `handoff list`, `checkpoint list`, the execution-control recovery
-scan, or `release-archivist`; do not resume, hand off, or route any more work.
+Before update checks or recovery overlays, inspect the persisted state. If it is `closing`, stop immediately: `closing` is a successful terminal state, the next skill is `none`, and you only report the terminal state and its persisted evidence. Do not run `handoff list`, `checkpoint list`, the execution-control recovery scan, or `release-archivist`; do not resume, hand off, or route any more work.
 
 Note: `closing` is the logical terminal of the state machine; the physical archive (merge + worktree cleanup) for Full/legacy Hotfix is performed by `ssf finish` in release-archivist. Lightweight paths have no physical archive step.
 
@@ -52,24 +48,21 @@ ssf workflow accept <change-dir> --source direct-request --verification <tdd|new
 
 Quick is ≤3 tasks/files of low-risk code. Hotfix is an incident with a reproducible symptom and ≤2 tasks/files. Display `Observed`, `Recommended`, `Why`, and any risk reasons; acceptance is the user's direct request to proceed and their explicit verification choice. Do not create planning artifacts, a contract, an execution plan, wave receipts, or DP approvals. Transition through the receipt-aware guard, execute bounded work, and require `test_result: pass` before closing. A fourth code file, behavioral-constraint change (PRD/spec/design/API/data/permission), cross-module work, a new module, high uncertainty, or failed verification does not auto-escalate: show Quick and Full, then wait for the user's choice. A user selecting Quick must acknowledge the recommendation and choose `tdd`, `new-test`, or `bounded` verification in the receipt. Tweak is only ≤4 config/doc-only tasks/files with no risk signals; it cannot be selected as an override. A legacy Hotfix without a valid direct receipt remains on the Full contract/DP-3/plan/review path.
 
+### Bearing-Fact Assumption Display
+
+The eight inferred facts are not equal. Task/file limits, `new_module`, and `schema_api_change` are countable and speak for themselves; `uncertainty`, `behavioral_constraint_change`, and `cross_module_change` are the judgment-heavy facts that can silently fail — yet the model certifies them itself. Do not certify them silently:
+
+- Within the same `Observed`/`Why` display, add one line per bearing fact that has no concrete evidence in the request or repository: inferred value, what breaks if it is wrong, and the evidence searched (found or absent). "Probably low risk" with no searched evidence is a STOP signal — the same evidence standard as bug-investigator's "It's probably X".
+- Never add a question round: the user's verification choice (`tdd`/`new-test`/`bounded`) in this same turn doubles as confirmation of the displayed assumptions.
+- If scrutiny flips a bearing fact (a behavioral constraint, cross-module surface, or high uncertainty surfaces), do not accept on the old facts: refresh `ssf workflow recommend` with the corrected facts and follow the risk-signal rule above — show Quick and Full and wait for the user's choice. Never auto-escalate.
+
 ## DP-0: User Confirmation Gate
 
-After Direct Short-Path Intake does not apply, run DP-0 when: change folder doesn't exist, planning artifacts are
-missing/empty, `dp_0_confirmed` is not `true`, or a legacy change still has an
-`auto`/empty workflow. Resolve the artifact language first, then complete the
-workflow path intake. Do not set `dp_0_confirmed=true` while path facts or the
-user's path choice are still missing.
+After Direct Short-Path Intake does not apply, run DP-0 when the change folder doesn't exist, planning artifacts are missing/empty, `dp_0_confirmed` is not `true`, or a legacy change still has an `auto`/empty workflow. Resolve the artifact language first, then complete the workflow path intake; do not set `dp_0_confirmed=true` while path facts or the user's path choice are still missing.
 
 ### Artifact Language Resolution
 
-Before the first planning artifact is generated, resolve one concrete artifact
-language in this priority order:
-
-1. explicit user language
-2. the conversation's primary language
-3. an explicit non-`auto` `execution.defaultLanguage`
-4. the primary language of existing planning artifacts in the current change
-5. the primary language of the project templates
+Before the first planning artifact is generated, resolve one concrete artifact language in this priority order: (1) explicit user language, (2) the conversation's primary language, (3) an explicit non-`auto` `execution.defaultLanguage`, (4) the primary language of existing planning artifacts in the current change, (5) the primary language of the project templates.
 
 Treat `execution.defaultLanguage: auto` as a request to continue resolving, not
 as a language. Append `artifact_language=<concrete-language>` to
@@ -86,10 +79,7 @@ Workflow path selection is a DP-0 intake decision. It selects the planning path
 the execution mode (`Inline`, `Batch Inline`, or `SDD`). It does not add a
 state or cause a phase transition.
 
-1. Obtain the change name and one-sentence intent before any state-dependent
-   command. Validate the change name as one non-empty relative path segment
-   (not `.` or `..`, with no `/` or `\\`), resolve the change dir as `<project-root>/changes/<change-name>`, and reject any normalized path that
-   escapes the project's `changes/` directory.
+1. Obtain the change name and one-sentence intent before any state-dependent command. Validate the change name as one non-empty relative path segment (not `.` or `..`, no `/` or `\\`), resolve the change dir as `<project-root>/changes/<change-name>`, and reject any normalized path escaping the project's `changes/` directory.
 2. If the state file is absent or `dp_0_confirmed` is `false`/null, run `ssf state init <change-dir>` before `show`; initialization must leave DP-0 unconfirmed.
 3. Read `state.workflow`. An explicit `full` workflow wins and skips automatic
    recommendation. For an explicit `hotfix`/`tweak`/`quick`, report the active
@@ -231,32 +221,21 @@ Decision point references when routing:
 ## Standard User-Facing Handoff
 
 End every user-facing phase report with this concise handoff. Only a successfully
-persisted `closing` state and `abandoned` are terminal.
+persisted `closing` state and `abandoned` are terminal. Each report states Current
+stage, Completed / blocker, Next stage, and Entry condition.
 
 ### Normal report
-
-- Current stage: `<detected workflow stage>`.
-- Completed / blocker: `<completed work>`.
-- Next stage: `<next workflow stage or skill>`.
-- Entry condition: `<what must be true to enter it>`.
+- Current stage: `<detected workflow stage>`. Completed / blocker: `<completed work>`.
+- Next stage: `<next workflow stage or skill>`. Entry condition: `<what must be true to enter it>`.
 
 ### Blocked report
-
-- Current stage: `<detected workflow stage>`.
-- Completed / blocker: `<blocking fact or missing evidence>`.
-- Next stage: `<stage that resumes after the blocker>`.
-- Entry condition: `<the approval, artifact, validation, or fix required>`.
+- Current stage: `<detected workflow stage>`. Completed / blocker: `<blocking fact or missing evidence>`.
+- Next stage: `<stage that resumes after the blocker>`. Entry condition: `<the approval, artifact, validation, or fix required>`.
 
 ### Approval-wait report
-
-- Current stage: `<detected workflow stage>`.
-- Completed / blocker: `<work ready for the named decision>`.
-- Next stage: `<stage that follows approval>`.
-- Entry condition: `<explicit user approval or recorded decision>`.
+- Current stage: `<detected workflow stage>`. Completed / blocker: `<work ready for the named decision>`.
+- Next stage: `<stage that follows approval>`. Entry condition: `<explicit user approval or recorded decision>`.
 
 ### Successful terminal report
-
-- Current stage: successfully persisted `closing` or `abandoned`.
-- Completed / blocker: `<persisted terminal outcome>`.
-- Next stage: `none`.
-- Entry condition: no further transition exists.
+- Current stage: successfully persisted `closing` or `abandoned`. Completed / blocker: `<persisted terminal outcome>`.
+- Next stage: `none`. Entry condition: no further transition exists.

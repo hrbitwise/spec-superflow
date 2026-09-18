@@ -3,7 +3,10 @@
 // Each rule is exported individually; also exported as a default bundle.
 
 const MAX_LINES_PER_SKILL = 250;
-const MAX_CHARS_PER_SKILL = 10000;
+// 20000：v0.8.7 后 workflow-start / build-executor 两个中枢 skill 承载完整状态机
+// 路由与执行契约（~19.6K 字符），10K 阈值早于功能翻倍期设定。行数红线 250 仍是
+// 主约束；字符阈值只防失控膨胀，不应逼迫删除完整 CLI flag 与边界语义。
+const MAX_CHARS_PER_SKILL = 20000;
 const MAX_EMPHASIS_MARKERS = 30;
 const MAX_IMPORTANT_OCCURRENCES = 3;
 const MAX_CODE_BLOCK_LINES = 15;
