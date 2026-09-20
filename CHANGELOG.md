@@ -6,6 +6,12 @@ The format loosely follows Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-09-20
+
+### Fixed
+
+- **Author field consistency across manifests**: `cmd-install-workbuddy.mjs`'s generated marketplace manifest had `author.name = 'MageByte-Zero'` (a repository path) instead of the brand name `MageByte`, and lacked the `author.url` field that every other manifest carries. It now follows the shared `{ name: 'MageByte', url: \`https://github.com/${GITHUB_REPO}\` }` shape. Six plugin/marketplace JSON files (root `plugin.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` ×2, `.codex-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `.github/plugin/marketplace.json` ×2) also carried stale `"url": "https://github.com/MageByte-Zero"` in the author object — all nine owner/author URLs now point at `https://github.com/hrbitwise`.
+
 ## [1.3.2] - 2026-09-20
 
 ### Added
@@ -648,4 +654,5 @@ The format loosely follows Keep a Changelog.
 - First release targets Claude Code and Trae style local skill loading
 - Runtime ownership remains inside `spec-superflow`
 - OpenSpec and Superpowers are reference influences, not runtime dependencies
+
 
