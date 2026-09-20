@@ -30,7 +30,7 @@ const defaultPluginRoot = resolve(__dirname, '..', '..'); // repo root when run 
 
 const DEFAULT_MARKETPLACE = 'cb_teams_marketplace';
 const PLUGIN_NAME = 'spec-superflow';
-const GITHUB_REPO = 'MageByte-Zero/spec-superflow';
+const GITHUB_REPO = 'hrbitwise/spec-superflow';
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 const RUNTIME_DIRS = ['scripts', 'docs', 'templates', 'dist', 'hooks'];
 const CANONICAL_COMMAND_NAMES = ['ssf:resume', 'ssf:save', 'ssf:switch'];

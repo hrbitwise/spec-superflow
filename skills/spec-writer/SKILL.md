@@ -51,7 +51,13 @@ Must include a delivery/proof map and dependency-aware tasks. Each task names th
 
 ## Artifact Generation
 
-When DP-0 has made the scope clear, generate the configured planning pack (proposal, delta specs from `templates/spec.md`, design, and tasks) in order without pausing between individual artifacts. Validate the pack, then request one DP-2 review. Pause earlier only when the missing decision can change user-visible behavior, compatibility, security, delivery scope, or the selected design; or when artifacts state incompatible scope.
+When DP-0 has made the scope clear, generate the configured planning pack in order without pausing between individual artifacts. **Load each artifact baseline template with an explicit `ssf runtime asset read`** — do not read `templates/` as a relative file path:
+- `proposal.md` → `ssf runtime asset read templates/proposal.md`
+- delta `spec.md` → `ssf runtime asset read templates/spec.md`
+- `design.md` → `ssf runtime asset read templates/design.md`
+- `tasks.md` → `ssf runtime asset read templates/tasks.md`
+
+All five templates are on the runtime allowlist (`templates/design.md`, `templates/execution-contract.md`, `templates/proposal.md`, `templates/spec.md`, `templates/tasks.md`). Validate the pack, then request one DP-2 review. Pause earlier only when the missing decision can change user-visible behavior, compatibility, security, delivery scope, or the selected design; or when artifacts state incompatible scope.
 
 ## Validation Checklist
 

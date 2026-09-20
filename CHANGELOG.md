@@ -1,10 +1,25 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to `spec-superflow` will be documented in this file.
 
 The format loosely follows Keep a Changelog.
 
 ## [Unreleased]
+
+## [1.3.2] - 2026-09-20
+
+### Added
+
+- **`ssf install-trae` command**: deploys spec-superflow for Trae CN (`~/.trae-cn`) and international Trae (`~/.trae`) editions. Detects CN first (fallback to international), copies runtime dependencies (`scripts`, `docs`, `templates`, `dist`, `hooks`) into a dedicated `spec-superflow/` plugin root so `ssf runtime asset read` resolves correctly, refreshes only the 9 spec-superflow skill directories in the shared global `skills/` tree (all third-party skills preserved), and writes a plain-markdown `phase-guard.md` into `user_rules/`. Supports `--local <path>`, `--tag <ver>`, `--trae-dir <path>`, and `--dry-run`.
+- **`scripts/lib/cmd-install-trae.mjs` + `scripts/install-trae.mjs`**: the Trae installer implementation, factored as a standalone global-level installer (Trae has no project-level skills directory, unlike every other NEW_PLATFORMS entry). Reuses `rewriteSkillMarkdown` from `runtime-rewrite.mjs` and a source-name-only skill replacement granularity (same pattern as codebuddy) so unrelated global skills are never wiped.
+
+### Changed
+
+- **GITHUB_REPO constants migrated**: all 6 installers (`install.mjs`, `cmd-install-codebuddy.mjs`, `cmd-install-trae.mjs`, `cmd-install-workbuddy.mjs`, `install-cursor.mjs`, `install-zcode.mjs`) plus `SECURITY.md`, `ci.yml`, and `docs/release-checklist.md` now point at `hrbitwise/spec-superflow` instead of the retired `MageByte-Zero/spec-superflow`. One latent typo in `release-checklist.md` (`gh repo sync MageByte-Zero/awesome-codex-plugins` → the correct upstream `hashgraph-online/awesome-codex-plugins`) was fixed incidentally; the marketplace URL under `plugins/hrbitwise/spec-superflow/` follows the new owner path.
+
+### Fixed
+
+- **spec-writer template reference**: the `## Artifact Generation` section now uses explicit `ssf runtime asset read templates/<name>.md` commands for all four planning artifacts (`proposal`, `spec`, `design`, `tasks`) instead of a single backticked relative `templates/spec.md`. Trae and every other platform install must place runtime dependencies under a plugin root that `ssf` resolves via `__dirname/../..`, so a bare backticked path fails whenever the skill directory and the runtime root diverge. Contract-builder already used the correct form; spec-writer is now aligned.
 
 ## [1.3.1] - 2026-09-20
 
@@ -633,3 +648,4 @@ The format loosely follows Keep a Changelog.
 - First release targets Claude Code and Trae style local skill loading
 - Runtime ownership remains inside `spec-superflow`
 - OpenSpec and Superpowers are reference influences, not runtime dependencies
+

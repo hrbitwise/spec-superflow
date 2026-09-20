@@ -41,6 +41,7 @@ const COMMANDS = {
   'install-qoder':    () => import('./lib/cmd-install-qoder.mjs'),
   'install-zcode':     () => import('./lib/cmd-install-zcode.mjs'),
   'install-codebuddy': () => import('./lib/cmd-install-codebuddy.mjs'),
+  'install-trae':      () => import('./lib/cmd-install-trae.mjs'),
   'uninstall-codebuddy': () => import('./lib/cmd-uninstall-codebuddy.mjs'),
 };
 
@@ -125,6 +126,7 @@ Commands:
   install-pi            Deploy to .pi/skills/ (Pi agent; no rules dir)
   install-qoder         Deploy to .qoder/ + .qoder/rules/ (Qoder)
   install-codebuddy     Deploy to ~/.codebuddy/skills/ + settings.json (CodeBuddy Code CLI)
+  install-trae          Deploy to ~/.trae-cn/ or ~/.trae/ (Trae CN / international)
   uninstall-codebuddy   Remove spec-superflow from ~/.codebuddy/ (CodeBuddy Code CLI)
 
 Options:
