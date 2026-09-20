@@ -47,6 +47,32 @@ export function readPlan(changeDir) {
   }
 }
 
+/**
+ * 为 recommendation receipt 解析生效的执行计划 revision：state 摘要完整时直接取
+ * state.execution_plan_revision；state rebuild 清空摘要后，从留存的 plan 文件恢复
+ * revision，并逐项校验（结构合法、hash 一致、摘要非部分清除、workflow 匹配），
+ * 任一失败即抛错，绝不把可疑的 revision 写入新 receipt（上游 #121）。
+ */
+export function resolveRecommendationPlanRevision(changeDir) {
+  const state = readState(changeDir);
+  if (state.execution_plan_revision !== null) return state.execution_plan_revision;
+
+  const plan = readPlan(changeDir);
+  if (!plan) return null;
+  const failures = validateStructure(plan);
+  const actualHash = tryHashPlan(plan);
+  if (actualHash === null) failures.push('execution plan content cannot be hashed');
+  else if (plan?.hash !== actualHash) failures.push('execution plan content hash mismatch');
+  if (state.revision !== null || state.execution_plan_hash !== null) {
+    failures.push('execution plan summary is only partially cleared');
+  }
+  if (plan?.workflow !== state.workflow) failures.push('execution plan workflow does not match state');
+  if (failures.length > 0) {
+    throw new Error(`Cannot recover execution plan revision for recommendation: ${failures.join('; ')}`);
+  }
+  return plan.revision;
+}
+
 /** 校验并原子写入执行计划（含 hash 一致性校验与 state summary 同步），返回重读后的 plan。 */
 export function writePlan(changeDir, plan) {
   const failures = validateStructure(plan);
@@ -118,10 +144,11 @@ export function validatePlan(changeDir, plan) {
   return { valid: failures.length === 0, failures, plan };
 }
 
-/** 校验 plan 结构：mode/source/rationale、recommendation/selection 形状、waves 唯一性与依赖合法性。 */
+/** 校验 plan 结构：revision 正整数、mode/source/rationale、recommendation/selection 形状、waves 唯一性与依赖合法性。 */
 function validateStructure(plan) {
   const failures = [];
   if (!isObject(plan)) return ['execution plan must be an object'];
+  if (!Number.isInteger(plan.revision) || plan.revision < 1) failures.push('execution plan revision is invalid');
   if (!EXECUTION_MODES.includes(plan.mode)) failures.push('execution plan mode is invalid');
   if (typeof plan.source !== 'string' || !plan.source.trim()) failures.push('execution plan source is required');
   if (!isNonEmptyText(plan.rationale)) failures.push('execution plan rationale is required');

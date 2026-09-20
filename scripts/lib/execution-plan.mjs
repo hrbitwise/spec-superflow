@@ -1,5 +1,5 @@
 // scripts/lib/execution-plan.mjs
-// Facade：对外公共 API 保持稳定（12 个导出不变），实现已按职责拆分为
+// Facade：对外公共 API 保持稳定（13 个导出），实现已按职责拆分为
 // plan-shared / plan-core / plan-git / plan-review / plan-repair /
 // plan-adjudication / plan-resync。本文件仅保留跨簇编排者 recordReview 与
 // describeWaves。
@@ -24,7 +24,7 @@ import {
 } from './plan-adjudication.mjs';
 
 export { EXECUTION_MODES } from './plan-shared.mjs';
-export { createPlan, readPlan, validatePlan, writePlan } from './plan-core.mjs';
+export { createPlan, readPlan, resolveRecommendationPlanRevision, validatePlan, writePlan } from './plan-core.mjs';
 export { createGitRangeValidator, isSubpath } from './plan-git.mjs';
 export { readCurrentReview } from './plan-review.mjs';
 export { adjudicateWave } from './plan-adjudication.mjs';
