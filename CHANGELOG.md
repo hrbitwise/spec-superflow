@@ -6,6 +6,13 @@ The format loosely follows Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-09-21
+
+### Fixed
+
+- **runtime guard 推断持久化 workflow**：`guard.mjs` 未显式传 `--workflow` 时，从 change 目录 state 的 workflow 字段自动推断，非法值回退 `full`；同时调整参数校验顺序，先校验 positionals 再推断 workflow，避免对缺失参数误报 workflow 错误（cherry-pick 自上游 #118）。
+- **state rebuild 后 recommend 恢复留存的执行计划 revision**：`resolveRecommendationPlanRevision()` 从 state 清空的摘要恢复后，会逐项校验留存的 plan 文件（结构合法、hash 一致、摘要非部分清除、workflow 匹配），任一失败即拒绝写入新 receipt；`createRecommendationReceipt` 支持显式传入恢复的 revision，`validateStructure` 增加 revision 正整数校验（cherry-pick 自上游 #121，因本地已拆分 execution-plan.mjs 巨石为 7 模块，经手工重定位移植）。
+
 ## [1.3.3] - 2026-09-20
 
 ### Fixed

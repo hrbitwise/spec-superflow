@@ -77,7 +77,7 @@ codex plugin marketplace add hashgraph-online/awesome-codex-plugins
 codex plugin add spec-superflow@awesome-codex-plugins
 
 # 直接从指定 release tag 安装（不等待社区镜像同步）
-codex plugin marketplace add hrbitwise/spec-superflow --ref v1.3.3
+codex plugin marketplace add hrbitwise/spec-superflow --ref v1.3.4
 codex plugin add spec-superflow@spec-superflow
 
 # 升级并验证社区 marketplace 安装
@@ -176,7 +176,7 @@ npx spec-superflow list          # 或通过 npx 使用
 
 ### 版本
 
-- 当前版本：`v1.3.3`
+- 当前版本：`v1.3.4`
 - v1.0：默认按风险走 Quick、direct Hotfix、Tweak 或 Full；小改动只保留边界与验证，复杂改动才进入完整规划、契约和审查
 - 自包含插件，不需要运行时安装 OpenSpec 或 Superpowers
 - 上游来源：[Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec) 和 [obra/superpowers](https://github.com/obra/superpowers)
