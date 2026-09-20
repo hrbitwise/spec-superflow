@@ -2,25 +2,54 @@
 // token-baseline.mjs — Token measurement baseline tool
 // Measures lines, characters, and estimated tokens for injection components.
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { resolve, join, relative, sep } from 'node:path';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 
-const TARGETS = [
+// 固定测量目标：非 skills 目录的注入组件（hook 与两份同源 phase-guard）
+const FIXED_TARGETS = [
   { path: 'hooks/session-start', label: 'hooks/session-start' },
   { path: '.claude/always/phase-guard.md', label: 'phase-guard (claude)' },
   { path: 'GEMINI.md', label: 'phase-guard (gemini)' },
-  { path: 'skills/workflow-start/SKILL.md', label: 'skill: workflow-start' },
-  { path: 'skills/need-explorer/SKILL.md', label: 'skill: need-explorer' },
-  { path: 'skills/spec-writer/SKILL.md', label: 'skill: spec-writer' },
-  { path: 'skills/contract-builder/SKILL.md', label: 'skill: contract-builder' },
-  { path: 'skills/build-executor/SKILL.md', label: 'skill: build-executor' },
-  { path: 'skills/bug-investigator/SKILL.md', label: 'skill: bug-investigator' },
-  { path: 'skills/code-reviewer/SKILL.md', label: 'skill: code-reviewer' },
-  { path: 'skills/release-archivist/SKILL.md', label: 'skill: release-archivist' },
-  { path: 'skills/spec-merger/SKILL.md', label: 'skill: spec-merger' },
 ];
+
+/**
+ * 递归收集目录下全部 .md 文件，返回相对 rootDir 的 posix 路径。
+ * 新增 skill 或 references 资产时自动纳入测量，无需再维护硬编码清单。
+ * @param {string} dir - 起始目录
+ * @param {string} rootDir - 路径基准目录
+ * @returns {string[]}
+ */
+function collectMarkdowns(dir, rootDir) {
+  const out = [];
+  const walk = d => {
+    for (const entry of readdirSync(d)) {
+      const full = join(d, entry);
+      if (statSync(full).isDirectory()) {
+        walk(full);
+      } else if (entry.endsWith('.md')) {
+        out.push(relative(rootDir, full).split(sep).join('/'));
+      }
+    }
+  };
+  if (existsSync(dir)) walk(dir);
+  return out.sort();
+}
+
+/**
+ * 动态构建测量目标：固定注入组件 + skills 下全部 markdown（入口与 references 资产）。
+ * @returns {Array<{path: string, label: string}>}
+ */
+function buildTargets() {
+  const skillMd = collectMarkdowns(join(REPO_ROOT, 'skills'), REPO_ROOT).map(rel => ({
+    path: rel,
+    label: rel.endsWith('/SKILL.md')
+      ? `skill: ${rel.split('/')[0]}`
+      : `skill-asset: ${rel.replace(/^skills\//, '')}`,
+  }));
+  return [...FIXED_TARGETS, ...skillMd];
+}
 
 /**
  * Count Chinese characters in a string.
@@ -70,9 +99,10 @@ function measureFile(target) {
  * @returns {{ timestamp: string, version: string, components: Array, totals: { lines: number, chars: number, estimatedTokens: number } }}
  */
 export function measureAll(options = {}) {
+  const allTargets = buildTargets();
   const targets = options.files
-    ? TARGETS.filter(t => options.files.split(',').some(f => t.path.includes(f.trim())))
-    : TARGETS;
+    ? allTargets.filter(t => options.files.split(',').some(f => t.path.includes(f.trim())))
+    : allTargets;
 
   const components = targets.map(measureFile);
   const totals = components.reduce(

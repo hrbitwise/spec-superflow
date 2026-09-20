@@ -62,6 +62,7 @@ Defines:
 - implementation constraints
 - the instructions for the execution plan and named execution waves
 - test obligations
+- quality gates: required checks, their placement, and the anti-bypass rules
 - review gates and their review receipts
 - escalation rules
 
@@ -101,6 +102,7 @@ the same CLI guards; other platforms are not promised identical slash names.
 - `proposal.md` -> intent lock and scope fence
 - `specs/` -> test obligations and acceptance checks
 - `design.md` -> implementation constraints
+- existing project check setup -> quality gates (checks, placement, thresholds, baseline)
 - `tasks.md` -> execution-plan waves in `<change>/.superpowers/sdd/execution-plan.json`
 
 ## Guardrail

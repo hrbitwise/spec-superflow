@@ -1,6 +1,15 @@
 ---
 name: build-executor
 description: Govern implementation from an approved execution contract. Invoke when execution-contract.md is approved and the user wants disciplined build work, TDD execution, or guarded batch-by-batch implementation.
+# 按需加载资产登记：正文对本 skill 资产的引用必须与本清单一致（lint 四象限校验：
+# 声明必存在 / 存在必声明 / 引用必声明 / 声明必有入边）。新增模板先登记再引用。
+assets:
+  - references/implementer-prompt.md
+  - references/task-reviewer-prompt.md
+  - references/re-review-prompt.md
+  - references/writing-good-tests.md
+  - references/batch-inline-execution.md
+  - references/inline-checkpoint.md
 ---
 
 # Build Executor
@@ -38,7 +47,7 @@ Quick follows the verification strategy persisted in its receipt: `tdd`, `new-te
 ### Test Quality Reference
 
 Before selecting or reviewing test evidence, read
-`skills/build-executor/writing-good-tests.md`. Apply its behavior-falsifiability
+`skills/build-executor/references/writing-good-tests.md`. Apply its behavior-falsifiability
 rules to Full and legacy Hotfix work without changing the persisted Quick
 strategy or the Tweak boundary. Documentation-only work uses appropriate
 format, link, lint, or build evidence; do not require invented unit tests.
@@ -101,11 +110,7 @@ When the plan becomes stale only because planning documents received a non-seman
 
 ## Batch Inline Execution
 
-Only when the user explicitly confirms `batch-inline` after seeing the recommendation. Current agent executes directly and serially. TDD Iron Law still applies.
-
-Procedure: announce mode → write failing test → confirm failure → implement → run suite → refactor → lightweight checkpoint (files exist, no placeholders, test passed, no unintended changes) → report.
-
-Boundaries: if any task touches >1 module, involves schema/API/config changes, or has open questions → downgrade to Inline or SDD.
+Only after the user explicitly confirms `batch-inline` post-recommendation: the current agent executes directly and serially under the TDD Iron Law. Read `skills/build-executor/references/batch-inline-execution.md` for the announce → RED → GREEN → refactor → checkpoint procedure. Hard boundary: any task touching >1 module, schema/API/config changes, or open questions downgrades the run to Inline or SDD.
 
 ## SDD Workflow
 
@@ -128,14 +133,14 @@ For Full/legacy Hotfix by default. Dispatch according to the persisted plan, rev
 
 Dispatch no repair before reading `ssf execution show <change-dir> --json`: use the CLI-provided `waves[].repair` state together with `eligible` and `retryable`. Never infer a repair round from filenames or history, and do not write, edit, or modify a repair-state file directly.
 
-- **Rounds 1–2 — recovery:** dispatch only the focused repair for the current wave. Give the implementer the CLI repair round, previous review report, and prior review head; generate a scoped diff from that head, then dispatch the `re-review-prompt.md` reviewer against the prior finding and that scoped diff. Do not redispatch dependent waves.
+- **Rounds 1–2 — recovery:** dispatch only the focused repair for the current wave. Give the implementer the CLI repair round, previous review report, and prior review head; generate a scoped diff from that head, then dispatch the `skills/build-executor/references/re-review-prompt.md` reviewer against the prior finding and that scoped diff. Do not redispatch dependent waves.
 - **Third unresolved failure — stop:** the third unresolved receipt yields CLI status `adjudication-required`. Stop automatic dispatch and request human adjudication rather than attempting a fourth repair. After human review, record it with `ssf execution adjudicate <change-dir> --wave <id> --decision allow-review --confirm --reason <text>`; it authorizes one continuous review only, never a pass, and a failed authorized review returns to `adjudication-required`.
 - Every focused re-review writes its separate persisted report, recorded only through `ssf execution review <change-dir> --wave <id> --base <sha> --head <sha> --report .superpowers/sdd/reviews/<wave-id>-rereview.md --verdict <pass|fail>`. A replacement `pass` receipt is the only evidence that resolves the wave.
 
 ### Per-Task Loop
-1. **Dispatch implementer**: Load the template with `ssf runtime asset read skills/build-executor/implementer-prompt.md`. Extract task brief with `scripts/task-brief PLAN_FILE N`. Include: where task fits, brief path, interfaces from prior tasks, report file path.
+1. **Dispatch implementer**: Load the template with `ssf runtime asset read skills/build-executor/references/implementer-prompt.md`. Extract task brief with `scripts/task-brief PLAN_FILE N`. Assemble the Context Pack exactly as the template defines it (verbatim binding contract/spec lines, design decisions with Sources, pattern pointers; no chat history or file dumps; repair report labeled evidence-to-verify), with the brief path, prior-task interfaces, and report file path.
 2. **Handle response**: DONE → generate review package + dispatch reviewer; DONE_WITH_CONCERNS → assess. For NEEDS_CONTEXT, BLOCKED, or another unresolved failure, append `Task N: failed attempt X/3 — <reason>` to the progress ledger. Retry only when the controller can name new evidence, new context, or a specific strategy change; the retry brief contains the prior failure reason, the single objective, and the necessary file paths — never repeat the planning pack or conversation history. After the third unresolved failure, stop automatic dispatch, enter DP-5, and ask the user for a decision.
-3. **Review**: Load `ssf runtime asset read skills/build-executor/task-reviewer-prompt.md`. Reviewer returns spec compliance + code quality verdicts with the wave ID, git range, report path, and `pass`/`fail` receipt command.
+3. **Review**: Load `ssf runtime asset read skills/build-executor/references/task-reviewer-prompt.md`. Reviewer returns spec compliance + code quality verdicts with the wave ID, git range, report path, and `pass`/`fail` receipt command.
 4. **Fix**: On Critical or Important issues, write the `fail` receipt, read the CLI repair state, then dispatch only the focused repair and re-review path permitted above. Write the replacement `pass` receipt only after that re-review passes.
 5. **Mark complete**: Append to `.superpowers/sdd/progress.md`: `Task N: complete (commits <base7>..<head7>, review clean)`
 
@@ -153,19 +158,7 @@ Only after a user-confirmed `inline` selection is recorded by `ssf execution pla
 
 Per-task: extract brief → write failing test → confirm failure → implement → confirm green → checkpoint review (done-when criteria, SHALL/MUST verification) → commit → save a task-level recovery checkpoint when another task remains → append to progress ledger.
 
-After a task is committed and reviewed, when another task remains, save the
-recovery context with real evidence:
-
-```bash
-ssf checkpoint save <change-dir> \
-  --task <completed-task-id> --next "<next task>" --completed "<completed work>" \
-  --verification "<verification report path>" --review "<review report path>" \
-  --risk "<open risk or None>" --commit-start <base-sha> --commit-end <head-sha>
-```
-
-This augments `.superpowers/sdd/progress.md`; it does not replace the progress
-ledger or add a new core workflow state. Do not claim a checkpoint is current
-when `ssf checkpoint list` reports it as stale.
+After a task is committed and reviewed and another task remains, save a task-level recovery checkpoint with real evidence — read `skills/build-executor/references/inline-checkpoint.md` for the exact `ssf checkpoint save` arguments (task, next, completed work, verification/review paths, risk, commit range). The checkpoint augments `.superpowers/sdd/progress.md`; it neither replaces the ledger nor adds a workflow state, and one reported stale by `ssf checkpoint list` must not be claimed as current.
 
 If a task reaches three unresolved failures, stop at DP-5 and request a human
 decision. If work moves outside the declared scope, replan instead of retrying.

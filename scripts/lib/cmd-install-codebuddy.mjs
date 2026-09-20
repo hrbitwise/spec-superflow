@@ -31,14 +31,14 @@
 // runtime dir, refreshes only the source-named skill directories, rewrites the
 // recovery command adapters, and merges SessionStart into settings.json.
 
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { cp, writeFile, mkdtemp } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { rewriteRuntime } from './runtime-rewrite.mjs';
+import { rewriteRuntime, rewriteSkillMarkdown } from './runtime-rewrite.mjs';
 import { writeShims, applyPathEntry } from './path-shim.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -236,25 +236,12 @@ async function copySkillsWithRoot(sourceSkills, targetSkills, pluginRootAbs, sou
   }
   ensureDir(targetSkills);
 
-  function rewriteRoot(filePath) {
-    if (!existsSync(filePath)) return;
-    let content = readFileSync(filePath, 'utf-8');
-    if (content.includes('${CLAUDE_PLUGIN_ROOT}')) {
-      content = content.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, pluginRootAbs);
-    }
-    content = rewriteRuntime(content, pluginRootAbs);
-    writeFileSync(filePath, content, 'utf-8');
-  }
-
   for (const name of sourceSkillNames) {
     const src = join(sourceSkills, name);
     const dst = join(targetSkills, name);
     await cp(src, dst, { recursive: true, force: true });
-    rewriteRoot(join(dst, 'SKILL.md'));
-    // Also fix sub-prompt / reference markdown files in the skill dir.
-    for (const sub of readdirSync(dst).filter(f => f.endsWith('.md') && f !== 'SKILL.md')) {
-      rewriteRoot(join(dst, sub));
-    }
+    // Rewrite SKILL.md, sub-prompts, and nested reference files.
+    rewriteSkillMarkdown(dst, pluginRootAbs);
   }
   return sourceSkillNames.length;
 }

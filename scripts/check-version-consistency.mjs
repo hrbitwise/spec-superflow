@@ -89,9 +89,9 @@ const RUNTIME_FILES = [
   'workflow-start', 'need-explorer', 'spec-writer', 'contract-builder',
   'build-executor', 'code-reviewer', 'bug-investigator', 'release-archivist', 'spec-merger',
 ].map(skill => `skills/${skill}/SKILL.md`).concat([
-  'skills/build-executor/implementer-prompt.md',
-  'skills/build-executor/task-reviewer-prompt.md',
-  'skills/code-reviewer/code-reviewer-prompt.md',
+  'skills/build-executor/references/implementer-prompt.md',
+  'skills/build-executor/references/task-reviewer-prompt.md',
+  'skills/code-reviewer/references/code-reviewer-prompt.md',
   'commands/ssf/resume.md',
   'commands/ssf/switch.md',
   'commands/ssf/save.md',

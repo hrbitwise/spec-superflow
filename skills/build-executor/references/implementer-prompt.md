@@ -15,9 +15,23 @@ Subagent (general-purpose):
     Read your task brief first: [BRIEF_FILE]
     It contains the full task text from the plan.
 
-    ## Context
+    ## Context Pack
 
-    [Scene-setting: where this fits, dependencies, architectural context]
+    [CONTEXT]
+
+    The controller assembled this pack deliberately. It must contain: where
+    this task fits and its dependency on prior tasks, the contract acceptance
+    items and spec SHALL/MUST lines that bind this task (quoted verbatim),
+    the relevant design decisions with their Sources labels, and file
+    pointers to established patterns to follow. It must NOT contain
+    conversation history, the controller's or user's speculations, full text
+    of unrelated files, or other tasks' implementation discussions. On a
+    repair dispatch, the prior review report is included as
+    evidence-to-verify, never as context to trust.
+
+    If the pack is insufficient, report NEEDS_CONTEXT naming the specific
+    gap — never ask for a repository or chat dump, and never guess from
+    filenames.
 
     ## Planned Wave
 
@@ -120,7 +134,7 @@ Subagent (general-purpose):
     - Did I follow existing patterns in the codebase?
 
     **Testing:**
-    - Read `skills/build-executor/writing-good-tests.md` before judging test evidence.
+    - Read `skills/build-executor/references/writing-good-tests.md` before judging test evidence.
     - Does each behavior test state an observable behavior, use an independent expectation,
       and name a plausible production change that would make it fail?
     - Have I labeled documentation-contract checks as such instead of presenting text-presence
@@ -177,6 +191,7 @@ Subagent (general-purpose):
 - `[task name]` — short name for the task
 - `[MODEL]` — REQUIRED: implementer model per build-executor Model Selection
 - `[BRIEF_FILE]` — REQUIRED: the task brief file (`scripts/task-brief PLAN N` prints the path)
+- `[CONTEXT]` — REQUIRED: the context pack defined in the template's Context Pack section (task placement, verbatim binding contract/spec lines, design decisions with Sources, pattern file pointers); never conversation history or unrelated file dumps
 - `[directory]` — working directory for the implementation
 - `[REPORT_FILE]` — REQUIRED: the file path where the implementer writes its full report
 

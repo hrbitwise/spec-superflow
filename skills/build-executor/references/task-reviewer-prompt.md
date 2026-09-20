@@ -110,7 +110,7 @@ Subagent (general-purpose):
     - Edge cases handled?
 
     **Tests:**
-    - Read `skills/build-executor/writing-good-tests.md` before assessing test evidence.
+    - Read `skills/build-executor/references/writing-good-tests.md` before assessing test evidence.
     - Does each claimed behavior test state an observable behavior, use an independent
       expectation, and identify a plausible production change it would catch?
     - Are text-presence assertions correctly limited to documentation-contract checks rather

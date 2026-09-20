@@ -33,7 +33,7 @@ Must state: observed problem, what changes, in/out scope, impact areas, and proo
 Every requirement must be testable. Use SHALL or MUST. Every requirement must have at least one `#### Scenario:` with WHEN/THEN. Group under ADDED/MODIFIED/REMOVED Requirements headers.
 
 ### design.md
-Must have: relevant facts and constraints, goals and non-goals, decisions (Choice + Rationale + Alternatives + Consequences), and risks with verification evidence. Do not invent stakeholders, migration steps, or open questions when they do not affect the decision.
+Must have: relevant facts and constraints, goals and non-goals, decisions (Choice + Rationale + Alternatives + Consequences + Sources), and risks with verification evidence. Do not invent stakeholders, migration steps, or open questions when they do not affect the decision.
 
 ### design.md Decisions — Red-Team Before Recording
 
@@ -41,6 +41,7 @@ Pressure-test every Decision before writing it; record the answers inside the ex
 
 - **Alternatives**: state the evidence that disqualifies each rejected alternative. A bare verdict (“simpler”, “better”) with no support is not a rationale.
 - **Consequences**: label each consequence as evidence-backed or inferred; an inference is acceptable only when its assumption is named.
+- **Sources**: any external factual claim the decision rests on — framework/runtime guarantees, API contracts, version-specific behavior, performance numbers — cites a specific document page plus its version or date; a bare domain is not a source. A purely internal trade-off (module layout, naming) is labeled `internal`. A claim whose source could not be located is labeled `unverified`: legal and non-blocking, but fabricating a precise link or citation is forbidden.
 - **Risks**: every risk links to a mitigation and to verification evidence.
 
 “It's probably fine” is a STOP signal — the same evidence standard as bug-investigator's “It's probably X”. If a field cannot be filled without inventing facts, first seek evidence in the repository or label the inference with its named assumption. Ask the user only when the gap meets the Artifact Generation pause conditions above; remain in specifying — do not route back to need-explorer or reopen DP-1.
@@ -61,7 +62,7 @@ When DP-0 has made the scope clear, generate the configured planning pack (propo
 - SHALL/MUST for required behavior, `#### Scenario:` with WHEN/THEN per requirement, grouped under delta headers, no contradictions
 
 ### design.md
-- facts/constraints, goals/non-goals, `## Decisions` (≥1, with Choice+Rationale+rejected-Alternative evidence+Consequences labeled evidence/inferred), risks linked to mitigation and verification; no unsupported verdict words or unlabeled inferences
+- facts/constraints, goals/non-goals, `## Decisions` (≥1, with Choice+Rationale+rejected-Alternative evidence+Consequences labeled evidence/inferred+Sources: specific page and version for external claims, `internal` for internal-only trade-offs, `unverified` allowed, fabricated citations forbidden), risks linked to mitigation and verification; no unsupported verdict words or unlabeled inferences
 
 ### tasks.md
 - delivery/proof map, numbered tasks, affected paths or bounded areas, observable outcomes, no placeholders, every requirement mapped, explicit dependencies

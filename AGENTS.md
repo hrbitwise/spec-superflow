@@ -57,9 +57,9 @@ TypeScript interfaces + regex-based parsers. Compiles to `dist/` (ES2022 + NodeN
 
 ### Skill Sub-Prompts
 
-- `skills/build-executor/implementer-prompt.md` — Subagent implementation template with TDD evidence + self-review requirements
-- `skills/build-executor/task-reviewer-prompt.md` — Dual-verdict review (spec compliance + code quality)
-- `skills/code-reviewer/code-reviewer-prompt.md` — Structured code review template with 3 severity levels
+- `skills/build-executor/references/implementer-prompt.md` — Subagent implementation template with TDD evidence + self-review requirements
+- `skills/build-executor/references/task-reviewer-prompt.md` — Dual-verdict review (spec compliance + code quality)
+- `skills/code-reviewer/references/code-reviewer-prompt.md` — Structured code review template with 3 severity levels
 
 ### State Machine
 

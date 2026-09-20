@@ -30,6 +30,7 @@ silently defaulting to English.
 | `specs/` → each `### Requirement:` | Approved Requirements, Scenarios, Test Obligations |
 | `design.md` → `## Decisions` | Architecture, Interface, Dependency Constraints |
 | `tasks.md` → numbered task groups | Execution Batches, Completion Definitions, Review Timing |
+| `design.md` + existing project check setup (lint / type / test / CI config) | Quality Gates: required checks, placement, thresholds, baseline |
 
 ## Cross-Check: Requirement Coverage
 
@@ -41,7 +42,7 @@ Before finalizing:
 
 ## Contract Structure
 
-Must make obvious: approved behavior, out-of-scope, constraints, batches, test obligations, review gates, and conditions that force a rewind to planning. Prefer compression over repeating planning details.
+Must make obvious: approved behavior, out-of-scope, constraints, batches, test obligations, quality gates, review gates, and conditions that force a rewind to planning. Prefer compression over repeating planning details, but keep the `## Quality Gates` anti-bypass rules verbatim.
 
 ## Approval Model (DP-3)
 
@@ -73,6 +74,7 @@ Generate a minimal contract only for a legacy Hotfix: Intent Lock (one sentence)
 - Do not approve the contract on the user's behalf
 - Do not skip the contract because planning docs look complete
 - Flag unmapped requirements; do not silently drop them
+- Keep the `## Quality Gates` anti-bypass rules verbatim; when the project has no configured check, record it as uncovered instead of dropping the rules
 
 ## Post-Generation
 

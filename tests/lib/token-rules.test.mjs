@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { checkMaxLines, checkMaxChars, checkMaxEmphasisMarkers, checkMaxCodeBlockLength } from '../../scripts/lint/rules/token-rules.mjs';
+import { checkMaxLines, checkMaxChars, checkMaxEmphasisMarkers, checkMaxCodeBlockLength, MAX_LINES_ASSET, MAX_CHARS_ASSET, MAX_LINES_LEAF, MAX_CHARS_LEAF, CONTROLLER_SKILLS, resolveBudget, default as tokenRules } from '../../scripts/lint/rules/token-rules.mjs';
 
 const CTX = { skillDirs: ['test-skill'], skillsDir: '/fake/skills' };
 const ROOT = process.cwd();
@@ -37,6 +37,85 @@ describe('token-rules: checkMaxChars', () => {
     const issues = await checkMaxChars('test', content, CTX, 10000);
     assert.equal(issues.length, 1);
     assert.equal(issues[0].severity, 'warning');
+  });
+});
+
+describe('token-rules: 入口与资产分级预算（bundle check）', () => {
+  it('bundle 声明 appliesTo=all', () => {
+    assert.equal(tokenRules.appliesTo, 'all');
+    assert.equal(MAX_LINES_ASSET, 220);
+    assert.equal(MAX_CHARS_ASSET, 12000);
+  });
+
+  it('资产子文件超过 220 行时报 error（阈值比入口 250 行更紧）', async () => {
+    const content = Array(221).fill('line').join('\n');
+    const issues = await tokenRules.check('test', content, { isSkillEntry: false });
+    const lineIssue = issues.find(i => i.message.includes('lines'));
+    assert.ok(lineIssue, '221 行的资产文件必须触发行数红线');
+    assert.equal(lineIssue.severity, 'error');
+    assert.ok(lineIssue.message.includes('220'), '错误消息必须携带资产阈值 220');
+  });
+
+  it('资产子文件 12001 字符时只报 warning（存量不触发整改）', async () => {
+    const issues = await tokenRules.check('test', 'x'.repeat(12001), { isSkillEntry: false });
+    const charIssue = issues.find(i => i.message.includes('chars'));
+    assert.ok(charIssue, '12001 字符必须触发字符预算警告');
+    assert.equal(charIssue.severity, 'warning');
+    assert.ok(charIssue.message.includes('12000'));
+  });
+
+  it('资产阈值不放松行数约束：221~250 行区间中枢放行但资产报错', async () => {
+    const content = Array(230).fill('line').join('\n');
+    const entryIssues = await tokenRules.check('build-executor', content, { isSkillEntry: true });
+    const assetIssues = await tokenRules.check('build-executor', content, { isSkillEntry: false });
+    assert.equal(entryIssues.find(i => i.message.includes('lines')), undefined, '230 行对中枢合法');
+    assert.ok(assetIssues.find(i => i.message.includes('lines')), '230 行对资产非法');
+  });
+
+  it('叶子入口超过 210 行时报 error（211~250 行区间中枢合法但叶子非法）', async () => {
+    const content = Array(230).fill('line').join('\n');
+    const leafIssues = await tokenRules.check('release-archivist', content, { isSkillEntry: true });
+    const controllerIssues = await tokenRules.check('workflow-start', content, { isSkillEntry: true });
+    assert.ok(leafIssues.find(i => i.message.includes('lines')), '230 行对叶子非法');
+    assert.equal(controllerIssues.find(i => i.message.includes('lines')), undefined, '230 行对中枢合法');
+  });
+
+  it('resolveBudget 三档分级与字符阈值正确', () => {
+    assert.deepEqual(resolveBudget('workflow-start', true), { lineLimit: 250, charLimit: 20000, tier: 'controller' });
+    assert.deepEqual(resolveBudget('build-executor', true), { lineLimit: 250, charLimit: 20000, tier: 'controller' });
+    assert.deepEqual(resolveBudget('release-archivist', true), { lineLimit: MAX_LINES_LEAF, charLimit: MAX_CHARS_LEAF, tier: 'leaf' });
+    assert.deepEqual(resolveBudget('release-archivist', false), { lineLimit: MAX_LINES_ASSET, charLimit: MAX_CHARS_ASSET, tier: 'asset' });
+    assert.ok(CONTROLLER_SKILLS.size === 2, '中枢集合只含两个状态机控制器');
+  });
+
+  it('存量叶子 SKILL.md 全部在 210 行 / 12000 字符内（阈值不得靠整改存量达成）', () => {
+    const controllers = new Set(['workflow-start', 'build-executor']);
+    const dirs = ['bug-investigator', 'code-reviewer', 'contract-builder', 'need-explorer',
+      'release-archivist', 'spec-merger', 'spec-writer'].filter(d => !controllers.has(d));
+    for (const dir of dirs) {
+      const c = read(`skills/${dir}/SKILL.md`);
+      assert.ok(c.split('\n').length <= MAX_LINES_LEAF, `${dir} 行数必须 ≤ ${MAX_LINES_LEAF}`);
+      assert.ok(c.length <= MAX_CHARS_LEAF, `${dir} 字符数必须 ≤ ${MAX_CHARS_LEAF}`);
+    }
+  });
+
+  it('资产文件豁免代码块长度红线（长 fenced 块是 prompt 模板本体），入口仍执行', async () => {
+    const longBlock = '```\n' + Array(20).fill('code').join('\n') + '\n```';
+    const assetIssues = await tokenRules.check('test', longBlock, { isSkillEntry: false });
+    const entryIssues = await tokenRules.check('test', longBlock, { isSkillEntry: true });
+    assert.equal(assetIssues.find(i => i.message.includes('Code block')), undefined,
+      '资产文件的长 fenced 块不应触发代码块红线');
+    assert.ok(entryIssues.find(i => i.message.includes('Code block')),
+      '入口文档的超长代码块必须继续被拦截');
+  });
+
+  it('缺省 ctx 按 SKILL.md 入口阈值执行（历史行为不变）', async () => {
+    const overEntry = Array(251).fill('line').join('\n');
+    const issues = await tokenRules.check('test', overEntry);
+    const lineIssue = issues.find(i => i.message.includes('lines'));
+    assert.ok(lineIssue);
+    assert.equal(lineIssue.severity, 'error');
+    assert.ok(lineIssue.message.includes('250'));
   });
 });
 
@@ -123,9 +202,9 @@ describe('spec publication documentation contract', () => {
 describe('SDD focused re-review documentation contract', () => {
   it('keeps repair dispatch CLI-governed and escalates a bounded re-review loop', () => {
     const executor = read('skills/build-executor/SKILL.md');
-    const implementer = read('skills/build-executor/implementer-prompt.md');
-    const reviewer = read('skills/build-executor/task-reviewer-prompt.md');
-    const rereviewer = read('skills/build-executor/re-review-prompt.md');
+    const implementer = read('skills/build-executor/references/implementer-prompt.md');
+    const reviewer = read('skills/build-executor/references/task-reviewer-prompt.md');
+    const rereviewer = read('skills/build-executor/references/re-review-prompt.md');
 
     assert.match(executor, /execution show <change-dir> --json[\s\S]*repair/i,
       'the controller must read CLI repair state before dispatching a repair');
@@ -201,10 +280,10 @@ describe('planning document readability contract', () => {
 
 describe('test-quality guidance contract', () => {
   it('teaches falsifiable behavior tests without changing the existing mode boundaries', () => {
-    const guide = read('skills/build-executor/writing-good-tests.md');
+    const guide = read('skills/build-executor/references/writing-good-tests.md');
     const executor = read('skills/build-executor/SKILL.md');
-    const implementer = read('skills/build-executor/implementer-prompt.md');
-    const reviewer = read('skills/build-executor/task-reviewer-prompt.md');
+    const implementer = read('skills/build-executor/references/implementer-prompt.md');
+    const reviewer = read('skills/build-executor/references/task-reviewer-prompt.md');
 
     assert.match(guide, /可观察行为/,
       'the guide must make the behavior under test observable');

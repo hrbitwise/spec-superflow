@@ -50,7 +50,7 @@ describe('skill-consistency: 真实仓库目录提取', () => {
   });
 
   it('提取 runtime asset 白名单', () => {
-    assert.ok(catalog.assetAllowlist.has('skills/build-executor/implementer-prompt.md'));
+    assert.ok(catalog.assetAllowlist.has('skills/build-executor/references/implementer-prompt.md'));
     assert.ok(catalog.assetAllowlist.has('docs/state-machine.md'));
   });
 });
@@ -62,7 +62,7 @@ describe('skill-consistency: parseSkillInvocations()', () => {
       'ssf execution review <change-dir> --wave <wave-id> \\',
       '  --base <sha> --head [HEAD_SHA] --verdict=pass',
       'ssf debug escalate changes/x --reason "three; things" --confirm',
-      'ssf runtime asset read skills/build-executor/implementer-prompt.md',
+      'ssf runtime asset read skills/build-executor/references/implementer-prompt.md',
       '```',
     ].join('\n');
     const invocations = parseSkillInvocations(markdown);
@@ -82,7 +82,7 @@ describe('skill-consistency: parseSkillInvocations()', () => {
     const asset = invocations[2];
     assert.equal(asset.command, 'runtime');
     assert.equal(asset.subcommand, 'asset');
-    assert.equal(asset.assetPath, 'skills/build-executor/implementer-prompt.md');
+    assert.equal(asset.assetPath, 'skills/build-executor/references/implementer-prompt.md');
   });
 
   it('不把占位符或 pass|fail 这类值误判为子命令', () => {
@@ -97,7 +97,7 @@ describe('skill-consistency: 真实仓库 dogfood', () => {
     const result = checkSkillConsistency(process.cwd());
     assert.deepEqual(result.issues, [], result.message);
     assert.equal(result.pass, true);
-    assert.ok(result.message.includes('14 skill files'));
+    assert.ok(result.message.includes('18 skill files'));
   });
 
   it('阈值契约全部满足（裁决次数/DP-5/状态名/执行模式）', () => {

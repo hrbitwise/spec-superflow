@@ -316,9 +316,9 @@ describe('execution control plane instructions', () => {
   });
 
   it('keeps task implementer and reviewer prompts aligned with planned waves and receipts', () => {
-    const implementer = read('skills/build-executor/implementer-prompt.md');
-    const taskReviewer = read('skills/build-executor/task-reviewer-prompt.md');
-    const reviewerPrompt = read('skills/code-reviewer/code-reviewer-prompt.md');
+    const implementer = read('skills/build-executor/references/implementer-prompt.md');
+    const taskReviewer = read('skills/build-executor/references/task-reviewer-prompt.md');
+    const reviewerPrompt = read('skills/code-reviewer/references/code-reviewer-prompt.md');
 
     assert.match(implementer, /planned wave/i);
     assert.match(implementer, /implementer report path/i);

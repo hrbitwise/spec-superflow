@@ -7,13 +7,13 @@
 // correctly. Also copies skills to .zcode/skills/ (where ZCODE reads them).
 //
 // Defaults to the latest GitHub release; use --local <path> to deploy from a local repo.
-import { existsSync, mkdirSync, readdirSync, statSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, statSync, rmSync } from 'node:fs';
 import { cp, writeFile, mkdtemp } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
-import { rewriteRuntime } from './lib/runtime-rewrite.mjs';
+import { rewriteSkillMarkdown } from './lib/runtime-rewrite.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultPluginRoot = dirname(__dirname); // repository root when running from clone
@@ -97,27 +97,9 @@ async function copySkillsWithRoot(sourceSkills, targetSkills, pluginRootAbs) {
     const dst = join(targetSkills, name);
     await cp(src, dst, { recursive: true, force: true });
 
-    // Replace ${CLAUDE_PLUGIN_ROOT} with the absolute path so commands work
-    const skillMd = join(dst, 'SKILL.md');
-    if (existsSync(skillMd)) {
-      let content = readFileSync(skillMd, 'utf-8');
-      if (content.includes('${CLAUDE_PLUGIN_ROOT}')) {
-        content = content.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, pluginRootAbs);
-      }
-      content = rewriteRuntime(content, pluginRootAbs);
-      writeFileSync(skillMd, content, 'utf-8');
-    }
-    // Also fix sub-prompt files (implementer-prompt.md, etc.)
-    const subFiles = readdirSync(dst).filter(f => f.endsWith('.md') && f !== 'SKILL.md');
-    for (const sub of subFiles) {
-      const subPath = join(dst, sub);
-      let content = readFileSync(subPath, 'utf-8');
-      if (content.includes('${CLAUDE_PLUGIN_ROOT}')) {
-        content = content.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, pluginRootAbs);
-      }
-      content = rewriteRuntime(content, pluginRootAbs);
-      writeFileSync(subPath, content, 'utf-8');
-    }
+    // Replace ${CLAUDE_PLUGIN_ROOT} and portable runtime invocations in
+    // SKILL.md, sub-prompts, and nested reference files (recursive).
+    rewriteSkillMarkdown(dst, pluginRootAbs);
   }
 
   return entries.length;

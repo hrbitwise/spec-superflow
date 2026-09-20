@@ -74,6 +74,11 @@ Subagent (general-purpose):
     - Documentation complete?
     - No obvious bugs?
 
+    **Security baseline (per contract `## Quality Gates`, always applies):**
+    - Any credentials, tokens, API keys, or private keys committed in the diff?
+    - Does every newly added dependency carry a recorded audit result — an ecosystem audit command or an explicit manual review?
+    - Where project tooling is absent, is the check recorded as `uncovered` with the substitute used, rather than reported as passed?
+
     ## Calibration
 
     Categorize issues by actual severity. Not everything is Critical.

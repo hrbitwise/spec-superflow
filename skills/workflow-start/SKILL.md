@@ -1,6 +1,9 @@
 ---
 name: workflow-start
 description: Primary entry point for the spec-superflow state-machine workflow. Invoke when the user is inside an active spec-superflow change directory (look for .spec-superflow.yaml, changes/<name>/, proposal.md, specs/, design.md, tasks.md, or execution-contract.md) and asks to start, continue, resume, implement, plan, or figure out the next workflow step. Also invoke when the user explicitly asks to start a new spec-superflow change or route through the spec-superflow workflow. Do not invoke for unrelated coding tasks that happen to use words like start, continue, implement, or plan.
+# 按需加载资产登记：正文引用必须与本清单一致（lint 四象限校验）。
+assets:
+  - references/prototype-handoff.md
 ---
 
 # Workflow Start
@@ -158,21 +161,7 @@ User explicitly requests, bug-investigator escalates after 3+ failures AND user 
 
 ### Optional Prototype Handoff
 
-When the user's brief explicitly contains UI, screen, interaction, layout, UX,
-or product-experience uncertainty, ask once whether a prototype would reduce
-uncertainty. Do not create a prototype handoff or enter a prototype worktree
-until the user confirms. After confirmation:
-
-```bash
-ssf handoff create <change-dir> \
-  --type prototype --objective "<confirmed objective>" \
-  --expected-output "<expected evidence>" --acceptance "<completion criterion>"
-ssf isolate <change-dir> prototype-<handoff-id>
-```
-
-Never suggest or enter this route automatically for backend, CLI, configuration,
-or internal-refactor work. Never pass `--force` to `ssf isolate` for prototype
-work.
+Only when the brief explicitly contains UI, screen, interaction, layout, UX, or product-experience uncertainty: ask once whether a prototype would reduce uncertainty, and do not create a handoff or enter a prototype worktree before the user confirms. After confirmation, read `skills/workflow-start/references/prototype-handoff.md` for the exact `ssf handoff create` + `ssf isolate` commands. Never take this route automatically for backend, CLI, configuration, or internal-refactor work, and never pass `--force` to prototype isolation.
 
 ### Fast-Path Routing
 - **Legacy Hotfix**: Route to contract-builder (minimal), skip need-explorer + spec-writer, guard check `exploring bridging --workflow hotfix`, then `bridging -> approved-for-build`, after DP-3 → build-executor (recommend, show, and confirm an execution mode), after → release-archivist (lightweight). It may skip planning artifacts but still requires a minimal contract, DP-3, and a current execution plan. A direct Hotfix instead follows Direct Short-Path Intake.

@@ -65,8 +65,8 @@ describe('canonical skill runtime protocol', () => {
   it('uses allowlisted runtime assets for build-executor prompts', () => {
     const content = skill('build-executor');
 
-    assert.match(content, /runtime asset read skills\/build-executor\/implementer-prompt\.md/);
-    assert.match(content, /runtime asset read skills\/build-executor\/task-reviewer-prompt\.md/);
+    assert.match(content, /runtime asset read skills\/build-executor\/references\/implementer-prompt\.md/);
+    assert.match(content, /runtime asset read skills\/build-executor\/references\/task-reviewer-prompt\.md/);
   });
 
   it('keeps the source command unversioned so npm link resolves the live checkout', () => {
@@ -180,9 +180,9 @@ describe('runtime version synchronization', () => {
     });
 
     assert.doesNotMatch(output, /skills\/code-reviewer\/SKILL\.md: version string updated/);
-    assert.doesNotMatch(output, /skills\/build-executor\/implementer-prompt\.md: version string updated/);
-    assert.doesNotMatch(output, /skills\/build-executor\/task-reviewer-prompt\.md: version string updated/);
-    assert.doesNotMatch(output, /skills\/code-reviewer\/code-reviewer-prompt\.md: version string updated/);
+    assert.doesNotMatch(output, /skills\/build-executor\/references\/implementer-prompt\.md: version string updated/);
+    assert.doesNotMatch(output, /skills\/build-executor\/references\/task-reviewer-prompt\.md: version string updated/);
+    assert.doesNotMatch(output, /skills\/code-reviewer\/references\/code-reviewer-prompt\.md: version string updated/);
     assert.match(output, /README\.md: version string updated/);
     assert.match(output, /INSTALL\.md: version string updated/);
     assert.match(output, /hooks\/session-start: version string updated/);

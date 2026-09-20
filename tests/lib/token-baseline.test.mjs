@@ -39,6 +39,26 @@ describe('token-baseline: measurement', () => {
     assert.ok(data.totals.estimatedTokens > 0, 'file should contain valid data');
     unlinkSync(outPath);
   });
+
+  it('默认测量动态覆盖全部 skills 入口与 references 资产（硬编码清单不得再漏掉子文件）', () => {
+    const out = execSync(`node "${BASELINE_PATH}"`, { encoding: 'utf-8' });
+    const data = JSON.parse(out);
+    const paths = data.components.map(c => c.path);
+    assert.ok(paths.includes('skills/workflow-start/SKILL.md'), '必须包含中枢入口');
+    assert.ok(paths.includes('skills/build-executor/references/implementer-prompt.md'),
+      '必须递归包含 build-executor references 资产');
+    assert.ok(paths.includes('skills/code-reviewer/references/code-reviewer-prompt.md'),
+      '必须递归包含 code-reviewer references 资产');
+    assert.ok(paths.includes('skills/workflow-start/references/prototype-handoff.md'),
+      '必须递归包含 workflow-start references 资产');
+    assert.ok(paths.includes('skills/build-executor/references/batch-inline-execution.md'),
+      '必须递归包含下沉后的 batch-inline 旁支资产');
+    // 9 个入口 + 9 个资产 = 18 个 skill markdown，加 3 个固定注入组件 = 21
+    assert.equal(paths.filter(p => p.startsWith('skills/')).length, 18,
+      'skill 组件数必须为 9 入口 + 9 资产');
+    const assetLabels = data.components.filter(c => c.label.startsWith('skill-asset:'));
+    assert.equal(assetLabels.length, 9, '资产组件必须使用 skill-asset: 标签');
+  });
 });
 
 describe('token-baseline: comparison', () => {

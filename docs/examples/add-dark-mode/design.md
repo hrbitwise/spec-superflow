@@ -26,12 +26,14 @@
 - Choice: use a single theme state source with a root-level theme attribute and tokenized colors
 - Rationale: centralizing theme state reduces drift and avoids scattered conditional styling
 - Alternatives considered: per-component toggles and duplicated light/dark class logic
+- Sources: `internal` — module layout over the existing UI code, no external behavioral claim
 
 ### Decision 2
 
 - Choice: persist explicit choice in localStorage
 - Rationale: it is simple, browser-native, and enough for a client-side preference
 - Alternatives considered: cookies and backend profile storage
+- Sources: MDN Web Docs, "Web Storage API: Window.localStorage", compatibility/security notes, accessed 2026-09 (https://developer.mozilla.org/docs/Web/API/Window/localStorage)
 
 ## Risks And Trade-Offs
 

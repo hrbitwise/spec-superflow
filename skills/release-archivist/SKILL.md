@@ -42,6 +42,7 @@ Claiming work is complete without verification is dishonesty, not efficiency. Be
 | Build succeeds | Build exit 0 | Linter passing |
 | Bug fixed | Original symptom passes | Code changed |
 | Requirements met | Line-by-line checklist | Tests passing |
+| Security baseline | Audit output or recorded `uncovered` substitute | "Reviewed earlier" assumption |
 
 ## Full/Legacy Verification Steps
 
@@ -57,13 +58,20 @@ Compare design decisions against code. Check naming consistency. Inconsistencies
 ### Step 4: Unintended Scope
 Check for files modified outside scope fence, new dependencies not in design. Unplanned = WARN.
 
-### Step 5: Report
+### Step 5: Security Baseline
+Verify the contract `## Quality Gates` security baseline was actually run for this change — a prior review does not substitute for evidence:
+- Secrets: scan the full change diff for credentials, tokens, API keys, private keys; findings = FAIL.
+- Dependencies: every newly added dependency carries an audit result (ecosystem command or recorded manual review); a high-severity known vulnerability = FAIL.
+- If project tooling is absent, the contract must record `uncovered` plus the substitute per anti-bypass rule 5; a check claimed without evidence = WARN.
+
+### Step 6: Report
 
 | Dimension | Status | Findings |
 |-----------|--------|----------|
 | Completeness | PASS/FAIL/WARN | [list] |
 | Correctness | PASS/FAIL/WARN | [list] |
 | Coherence | PASS/FAIL/WARN | [list] |
+| Security baseline | PASS/FAIL/WARN | [list] |
 
 **Verdict**: PASS (all PASS) / CONDITIONAL (WARN only) / FAIL (any FAIL).
 - FAIL → fix issues or route back to build-executor
@@ -75,6 +83,7 @@ Check for files modified outside scope fence, new dependencies not in design. Un
 - Tests passing? (cite command and output)
 - All batches complete? (cite batch status)
 - Scope added without artifact updates?
+- Security baseline evidence recorded (Step 5)?
 - Unresolved blockers or known risks?
 - Delta specs exist that need merging?
 - Run `ssf audit <change-dir>` — include `decision-point-audit.md` in archive

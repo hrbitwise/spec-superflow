@@ -1,6 +1,10 @@
 ---
 name: code-reviewer
 description: Review completed implementation batches for spec compliance and code quality. Invoke after execution batches complete, before merging, or when a review gate is reached in the workflow.
+# 按需加载资产登记：正文对本 skill 资产的引用必须与本清单一致（lint 四象限校验）。
+assets:
+  - references/code-reviewer-prompt.md
+  - references/adversarial-reviewer-prompt.md
 ---
 
 # Code Reviewer
@@ -14,7 +18,7 @@ Two responsibilities: requesting review (dispatching a reviewer subagent) and re
 
 ### Procedure
 1. Get SHAs: `BASE_SHA=$(git rev-parse HEAD~1)` and `HEAD_SHA=$(git rev-parse HEAD)`
-2. Dispatch `general-purpose` subagent using template at `skills/code-reviewer/code-reviewer-prompt.md`
+2. Dispatch `general-purpose` subagent using template at `skills/code-reviewer/references/code-reviewer-prompt.md`
 3. Fill placeholders: `[DESCRIPTION]` (what was built), `[PLAN_OR_REQUIREMENTS]` (contract/spec reference), `[BASE_SHA]`, `[HEAD_SHA]`, `[WAVE_ID]`, and a distinct `[REVIEW_REPORT_FILE]`.
 4. Require the reviewer to write a non-empty persisted review report at `.superpowers/sdd/reviews/<wave-id>.md`, then record that exact in-overlay path in the wave receipt with `ssf execution review <change-dir> --wave <wave-id> --base <base-sha> --head <head-sha> --report .superpowers/sdd/reviews/<wave-id>.md --verdict <pass|fail>`. The execution plan initializes this directory; paths outside it are rejected for audit safety.
 5. Act on feedback: Critical/Important findings require a `fail` receipt, focused repair, re-review, and replacement `pass` receipt before a dependent wave or closing can proceed. Note Minor for later, push back with reasoning if reviewer is wrong.
@@ -25,6 +29,31 @@ Two responsibilities: requesting review (dispatching a reviewer subagent) and re
 For unrequested complexity, cite the missing task requirement and diff line.
 Use Important for merge-blocking complexity and Minor for safe,
 behavior-neutral redundancy; never score by line count.
+
+### Anti-Bypass Check
+
+Verify the reviewed diff does not weaken the contract's `## Quality Gates`: no
+relaxed or removed assertions, deleted or skipped tests, new `--no-verify` /
+`@ts-ignore` / `eslint-disable` escapes, or edits to lint, type, or CI
+configuration. Any of these without a recorded user approval in the contract is
+a Critical finding and requires a `fail` receipt.
+
+### Security Baseline Check
+
+Verify the reviewed diff meets the contract's `## Quality Gates` security baseline:
+
+- **Secrets**: no credentials, tokens, API keys, or private keys in the diff; config and secrets must live outside version control.
+- **Dependencies**: every newly added dependency carries a recorded audit result — an ecosystem audit command or an explicit manual review.
+
+A leaked credential, or a newly added dependency with a known high-severity vulnerability, is Critical. A missing or unrecorded check is Important: the change is unverified, not merely untidy. When the project has no tooling, require the substitute recorded under the contract's anti-bypass rule 5.
+
+### Adversarial Review (high-risk waves)
+
+The standard review doubts the report while reading it. When an unexamined assumption is itself the danger, dispatch the template at `skills/code-reviewer/references/adversarial-reviewer-prompt.md` **instead of** the standard template — same gate, same receipt mechanism, deeper method.
+
+**Trigger when any one holds:** irreversible actions (schema/data migration, deletion, authn/authz, payment, crypto); unfamiliar or unowned code spanning 3+ modules; the implementer self-reported DONE_WITH_CONCERNS; or a relevant design decision is labeled `unverified`.
+
+Fresh-context rules: dispatch a new subagent receiving only the binding requirements (verbatim), the relevant design excerpt with Sources labels, the trigger reason, and the diff — never the implementer's report or conversation history. Resolve the standard review profile; a stronger profile or model upgrade needs explicit user approval before dispatch, with the trigger and cost disclosed. The report lands at `.superpowers/sdd/reviews/<wave-id>-adversarial.md`. A refuted or unresolved proposition on a high-risk path is a `fail` receipt plus human escalation — never an optimistic pass. Do not run it as an extra gate on top of the standard review; it replaces that wave's standard review.
 
 ## Part 2: Receiving Review Feedback
 

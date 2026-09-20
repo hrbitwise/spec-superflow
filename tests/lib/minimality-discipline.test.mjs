@@ -9,7 +9,7 @@ const read = file => readFileSync(join(ROOT, file), 'utf8');
 describe('minimality discipline: broad reviewer', () => {
   it('traces unrequested complexity to the missing requirement and diff line', () => {
     const skill = read('skills/code-reviewer/SKILL.md');
-    const prompt = read('skills/code-reviewer/code-reviewer-prompt.md');
+    const prompt = read('skills/code-reviewer/references/code-reviewer-prompt.md');
     assert.match(skill, /## Minimality And Scope/);
     assert.match(skill, /missing task requirement and diff line/);
     assert.match(skill, /Important for merge-blocking complexity/);
