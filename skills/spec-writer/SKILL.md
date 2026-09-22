@@ -33,7 +33,7 @@ Must state: observed problem, what changes, in/out scope, impact areas, and proo
 Every requirement must be testable. Use SHALL or MUST. Every requirement must have at least one `#### Scenario:` with WHEN/THEN. Group under ADDED/MODIFIED/REMOVED Requirements headers.
 
 ### design.md
-Must have: relevant facts and constraints, goals and non-goals, decisions (Choice + Rationale + Alternatives + Consequences + Sources), and risks with verification evidence. Do not invent stakeholders, migration steps, or open questions when they do not affect the decision.
+Must have: relevant facts and constraints, goals and non-goals, a completed Boundary Check (layer attribution via the three questions — product-wide generic / industry-shared / customer-specific; repo and module landing; extension-means priority self-check: config > lowcode/config-driven > SPI > new module > kernel change; prohibited-item self-check; project boundary-contract reference, plus downstream impact for kernel-layer changes), decisions (Choice + Rationale + Alternatives + Consequences + Sources), and risks with verification evidence. A hit on any prohibited item is a specifying rollback, not a DP-2 repair. Do not invent stakeholders, migration steps, or open questions when they do not affect the decision.
 
 ### design.md Decisions — Red-Team Before Recording
 
@@ -68,7 +68,7 @@ All five templates are on the runtime allowlist (`templates/design.md`, `templat
 - SHALL/MUST for required behavior, `#### Scenario:` with WHEN/THEN per requirement, grouped under delta headers, no contradictions
 
 ### design.md
-- facts/constraints, goals/non-goals, `## Decisions` (≥1, with Choice+Rationale+rejected-Alternative evidence+Consequences labeled evidence/inferred+Sources: specific page and version for external claims, `internal` for internal-only trade-offs, `unverified` allowed, fabricated citations forbidden), risks linked to mitigation and verification; no unsupported verdict words or unlabeled inferences
+- facts/constraints, goals/non-goals, Boundary Check fully answered (attributed layer with a concrete reason per question, repo/module landing, extension-priority level and why the higher level cannot solve it, prohibited items explicitly checked "none" or named, contract path; kernel-layer changes carry a downstream-impact statement), `## Decisions` (≥1, with Choice+Rationale+rejected-Alternative evidence+Consequences labeled evidence/inferred+Sources: specific page and version for external claims, `internal` for internal-only trade-offs, `unverified` allowed, fabricated citations forbidden), risks linked to mitigation and verification; no unsupported verdict words or unlabeled inferences
 
 ### tasks.md
 - delivery/proof map, numbered tasks, affected paths or bounded areas, observable outcomes, no placeholders, every requirement mapped, explicit dependencies
