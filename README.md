@@ -16,6 +16,7 @@
   <a href="#为什么需要它">为什么</a> |
   <a href="#核心-skills">Skills</a> |
   <a href="#工作流">工作流</a> |
+  <a href="#与同类方案对比">对比</a> |
   <a href="docs/README_en.md">English</a> |
   <a href="docs/showcase.html">Showcase</a> |
   <a href="#常见问题">FAQ</a>
@@ -298,6 +299,27 @@ spec-superflow 把这两类问题分开处理：先判断改动风险；小改�
 
 ---
 
+## 与同类方案对比
+
+AI 编程工作流类工具按“控制哪一层风险”分层：需求理解、规范漂移、上下文接力、交付质量。spec-superflow 把其中最相关的两条能力（OpenSpec 式变更管理 + Superpowers 式执行纪律）收敛成一条状态机流水线，并把需求追问与上下文接力内化为内环。
+
+| 同类方案 | 它控制的风险 | 在本项目中的对应 | 差异 |
+|---|---|---|---|
+| [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me) | 需求太粗，边界与验收没说清 | `need-explorer` 一次一问 + 2-3 方案对比 → DP-0/DP-1 | 内化为工作流内环，不是可插拔技能 |
+| [Spec-Kit](https://github.com/github/spec-kit) | 先定规范，再生成计划与任务 | `spec-writer` + Schema 引擎（SHALL/MUST/Scenario 强制校验） | 工件是机器可校验的，不只是阶段文档 |
+| [OpenSpec](https://github.com/Fission-AI/OpenSpec) | 存量项目的持续变更与归档 | `changes/<name>/` 工件 + `spec-merger` + closing 归档 | 源码级吸收；活动变更只读 change 目录 |
+| [Trellis](https://github.com/mindfold-ai/Trellis) | 跨会话丢失上下文，任务无法接力 | `.spec-superflow.yaml` 状态机 + `ssf checkpoint` / `ssf handoff` + 执行计划 revision | 用内容级状态文件与可校验凭据替代项目记忆目录 |
+| [Superpowers](https://github.com/obra/superpowers) | 实现质量与交付过程 | `build-executor` TDD 铁律 + SDD + Review Gate + 审查收据 | 源码级吸收，并把“完成”变成必须落盘的 receipt |
+
+和“装多个 Skill 再组合”的差别在四点：
+
+- **单入口**：只有 `workflow-start` 一个入口，guard 阻断非法状态转移，不存在多个流程争抢主导权。
+- **风险分级**：`ssf workflow recommend` 按八项事实推荐 Full / Hotfix / Quick / Tweak，选择非推荐路径必须显式确认。
+- **执行凭据化**：review receipt、`test_result: pass`、执行计划 revision 都是可校验证据，而不是“文档写了就算执行了”。
+- **一体化交付**：不能只采用其中一环（例如只用 Review Gate 而不进入状态机）。
+
+---
+
 ## 核心 Skills
 
 | # | Skill | 阶段 | 职责 |
@@ -394,6 +416,13 @@ ssf config --resolve-model mechanical
 <summary><strong>spec-superflow 和 OpenSpec / Superpowers 什么关系？</strong></summary>
 
 源码级融合，不是简单并列。吸收了两者的引擎（Schema/验证/解析 + TDD/SDD/调试/审查），独创了 contract-builder 桥接层和 8 状态路由。自包含，不需要安装上游运行时。
+
+</details>
+
+<details>
+<summary><strong>和 grill-me / Trellis / Spec-Kit 这类工具怎么选？</strong></summary>
+
+它们各自控制一层风险：grill-me 管需求追问、Trellis 管上下文接力、Spec-Kit 管阶段规范。spec-superflow 把这四层收敛成一条状态机流水线，同一次变更只有一个主流程，其余能力只做内环。只需要其中一环可以单独用对应工具；要完整链路就用 spec-superflow。详见 [与同类方案对比](#与同类方案对比)。
 
 </details>
 

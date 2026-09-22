@@ -16,6 +16,7 @@
   <a href="#why">Why</a> |
   <a href="#core-skills">Skills</a> |
   <a href="#workflow">Workflow</a> |
+  <a href="#comparison-with-similar-approaches">Compare</a> |
   <a href="../README.md">中文</a> |
   <a href="showcase.html">Showcase</a> |
   <a href="#faq">FAQ</a>
@@ -225,6 +226,27 @@ spec-superflow handles these cases differently: it first assesses change risk; s
 
 ---
 
+## Comparison with Similar Approaches
+
+AI coding workflow tools layer by which risk they control: requirement clarity, spec drift, context handoff, and delivery quality. spec-superflow converges the two most relevant capabilities (OpenSpec-style change management + Superpowers-style execution discipline) into one state-machine pipeline, and internalizes requirement questioning and context handoff as inner loops.
+
+| Similar approach | Risk it controls | How it maps here | Difference |
+|---|---|---|---|
+| [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me) | Vague requirements, unclear boundaries and acceptance | `need-explorer` one question at a time + 2-3 option comparison → DP-0/DP-1 | Internalized as a workflow step, not a pluggable skill |
+| [Spec-Kit](https://github.com/github/spec-kit) | Define specs before plans and tasks | `spec-writer` + Schema engine (enforced SHALL/MUST/Scenario) | Artifacts are machine-checked, not just stage documents |
+| [OpenSpec](https://github.com/Fission-AI/OpenSpec) | Ongoing changes and archiving in brownfield projects | `changes/<name>/` artifacts + `spec-merger` + closing archive | Absorbed at source level; active changes read only the change folder |
+| [Trellis](https://github.com/mindfold-ai/Trellis) | Context lost between sessions, tasks cannot hand off | `.spec-superflow.yaml` state machine + `ssf checkpoint` / `ssf handoff` + plan revisions | Content-level state files and verifiable receipts replace a project memory folder |
+| [Superpowers](https://github.com/obra/superpowers) | Implementation quality and delivery process | `build-executor` TDD iron law + SDD + review gates + review receipts | Absorbed at source level, and "done" must be backed by a persisted receipt |
+
+Four differences from "install several skills and combine them":
+
+- **Single entry:** `workflow-start` is the only entry point, and guards block illegal transitions — no competing main flows.
+- **Risk-graded:** `ssf workflow recommend` recommends Full / Hotfix / Quick / Tweak from eight facts; picking a non-recommended path requires explicit acknowledgement.
+- **Evidence over ceremony:** review receipts, `test_result: pass`, and execution-plan revisions are verifiable evidence, not "the doc says it was executed".
+- **Integrated delivery:** there is no partial adoption (for example, review gates without the state machine).
+
+---
+
 ## Core Skills
 
 | # | Skill | Stage | Purpose |
@@ -372,6 +394,13 @@ This command only resolves local configuration, does not call platform APIs, and
 <summary><strong>How is this different from OpenSpec or Superpowers?</strong></summary>
 
 spec-superflow is a source-level fusion, not side-by-side installation. It absorbs OpenSpec's Schema/validation/parsing engine and Superpowers' TDD/SDD/debugging/review discipline, while adding a unique contract-builder bridge layer and 8-state routing. Self-contained — no upstream runtimes needed.
+
+</details>
+
+<details>
+<summary><strong>How does it compare to grill-me / Trellis / Spec-Kit?</strong></summary>
+
+Each controls one risk layer: grill-me for requirement questioning, Trellis for context handoff, Spec-Kit for stage-based specs. spec-superflow converges these layers into one state-machine pipeline where a change has exactly one main flow and other capabilities only serve as inner loops. Use the individual tool if you only need one layer; use spec-superflow for the full chain. See [Comparison with Similar Approaches](#comparison-with-similar-approaches).
 
 </details>
 
