@@ -42,7 +42,7 @@ jobs:
         continue-on-error: true
 
   platform-install-smoke:
-    name: Platform Install Smoke (9 platforms)
+    name: Platform Install Smoke (12 platforms)
     runs-on: ubuntu-latest
     if: "!startsWith(github.ref, 'refs/tags/')"
     strategy:
@@ -53,25 +53,38 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Smoke test all 9 platform installers (--local)
+      - name: Smoke test all 12 platform installers (--local)
         shell: bash
         run: |
           set -e
-          declare -A SKILLS=( [cline]=.cline/skills [kiro]=.kiro/skills [windsurf]=.windsurf/skills [qwen]=.qwen/skills [amazon-q]=.amazonq/skills [roocode]=.roo/skills [continue]=.continue/skills [pi]=.pi/skills )
-          declare -A RULES=( [cline]=.clinerules/phase-guard.md [kiro]=.kiro/steering/phase-guard.md [windsurf]=.windsurf/rules/phase-guard.md [qwen]=.qwen/rules/phase-guard.md [amazon-q]=.amazonq/rules/phase-guard.md [roocode]=.roo/rules/phase-guard.md [continue]=.continue/rules/phase-guard.md )
-          for id in cline kiro windsurf qwen amazon-q roocode continue pi; do
+          # 技能目录清单：键值取自 platforms.mjs 注册值（cursor/zcode 为独立安装器，路径同形）
+          declare -A SKILLS=( [cline]=.cline/skills [kiro]=.kiro/skills [windsurf]=.windsurf/skills [qwen]=.qwen/skills [amazon-q]=.amazonq/skills [roocode]=.roo/skills [continue]=.continue/skills [pi]=.pi/skills [qoder]=.qoder/skills [cursor]=.cursor/skills [zcode]=.zcode/skills )
+          # 规则文件清单：qoder 为 md；cursor/zcode 为 mdc（路径取自 platforms.mjs/安装器注册值）
+          declare -A RULES=( [cline]=.clinerules/phase-guard.md [kiro]=.kiro/steering/phase-guard.md [windsurf]=.windsurf/rules/phase-guard.md [qwen]=.qwen/rules/phase-guard.md [amazon-q]=.amazonq/rules/phase-guard.md [roocode]=.roo/rules/phase-guard.md [continue]=.continue/rules/phase-guard.md [qoder]=.qoder/rules/phase-guard.md [cursor]=.cursor/rules/phase-guard.mdc [zcode]=.zcode/rules/phase-guard.mdc )
+          for id in cline kiro windsurf qwen amazon-q roocode continue pi qoder cursor zcode; do
             tmp="$(mktemp -d)"
             ( cd "$tmp" && node "$GITHUB_WORKSPACE/scripts/install-$id.mjs" --local "$GITHUB_WORKSPACE" > /dev/null )
             [ -d "$tmp/${SKILLS[$id]}" ] || { echo "FAIL $id: skills dir missing"; exit 1; }
             count="$(ls "$tmp/${SKILLS[$id]}" | wc -l | tr -d ' ')"
             [ "$count" -ge 9 ] || { echo "FAIL $id: only $count skills (expected 9)"; exit 1; }
             if [ -n "${RULES[$id]:-}" ]; then
-              [ -f "$tmp/${RULES[$id]}" ] || { echo "FAIL $id: phase-guard rule missing"; exit 1; }
+              rule="$tmp/${RULES[$id]}"
+              [ -f "$rule" ] || { echo "FAIL $id: phase-guard rule missing"; exit 1; }
+              # 内容断言：统一命中 Quick long 条款（不只是文件存在），模板与 CI 两层互守
+              grep -q 'Quick 仅限 ≤3 单模块代码文件' "$rule" || { echo "FAIL $id: Quick long clause missing"; exit 1; }
+              # mdc（cursor/zcode）frontmatter 单独断言，与正文 long 断言分离
+              case "${RULES[$id]}" in
+                *.mdc)
+                  [ "$(head -n1 "$rule")" = "---" ] || { echo "FAIL $id: mdc frontmatter fence missing"; exit 1; }
+                  grep -q '^description: spec-superflow' "$rule" || { echo "FAIL $id: mdc description missing"; exit 1; }
+                  grep -q '^alwaysApply: true$' "$rule" || { echo "FAIL $id: mdc alwaysApply missing"; exit 1; }
+                  ;;
+              esac
             fi
             echo "OK $id — 9 skills, rule=${RULES[$id]:-none}"
           done
           # CodeBuddy deploys to a user-level config dir via --config-dir (not the
-          # project-level layout used by the 8 installers above). Verify the
+          # project-level layout used by the 11 installers above). Verify the
           # settings.json SessionStart contract, the command adapter rewrite, and
           # the phase-guard alwaysApply:false frontmatter.
           cb_tmp="$(mktemp -d)"
@@ -88,7 +101,7 @@ jobs:
           grep -q 'Bash(node:\*)' "$cb_tmp/commands/ssf/resume.md" || { echo "FAIL codebuddy: resume.md allowed-tools not rewritten to node"; exit 1; }
           rm -rf "$cb_tmp"
           echo "OK codebuddy — 9 skills, settings.json SessionStart, commands rewritten, phase-guard scoped"
-          echo "All 9 platform installers passed smoke test."
+          echo "All 12 platform installers passed smoke test."
 
   codebuddy-install-smoke:
     name: CodeBuddy Install Smoke (Windows shims)
