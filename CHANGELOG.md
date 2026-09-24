@@ -16,8 +16,16 @@ The format loosely follows Keep a Changelog.
 - **占位符检测大小写不敏感**：`src/validation/validator.ts` 的 Correctness 检测从裸子串 `includes` 改为词边界正则 `/\b(TODO|FIXME|HACK|XXX|PLACEHOLDER)\b/i`。小写独立标记（如 `hack this later`、`// todo: fix`）新增 FAIL；`HACKERONE`、`HACKATHON`、`XXXX` 等包含标记子串的正常单词不再误报；`TODOX`、`MYTODO` 不命中。注意：`_TODO_`、`TODO_VALUE`、`TODO123` 因下划线/数字属单词字符不再 FAIL——这些形态为代码标识符而非占位符；标记后紧邻中日韩文字（`TODO中文待补`）仍命中。
 - **Completeness 空集不再真空 PASS**：`validateImplementation` 在 spec 中提取到 0 条需求时，Completeness 从 PASS 变为 WARN（finding 说明未找到可校验需求头），验证总体 verdict 从 PASS 变为 **CONDITIONAL**；自动化流程不得再把空集当通过。含需求的正常路径判定不变。
 - **需求头行首锚定**：需求名提取与 delta 解析统一后，散文行内嵌的 `### Requirement:` 子串不再被提取为需求（此前会误判）。
+- **`ssf finish` 在隔离 worktree 内运行语义修复**：finish 的 mainRoot 改取 `git worktree list` 主条目后，从 linked worktree 发起也能正确合并主工作区（此前为静默 no-op）；worktree 输出畸形（空/缺 path/路径不存在）时 fail-closed 退出、不执行 merge；主路径 git 调用由 2 次减为 1 次。
+- **状态文件写入原子化**：state-loader 的 writeState 改用 temp+rename 的 atomicWrite——并发/崩溃场景读者恒得完整旧版或新版；Windows 下目标被第三方以非删除共享占用时，写入由静默覆盖变显式 EPERM 失败；文件文本逐字节不变。
+- **PATH 写入新增读回校验**：writeWindowsUserPath 写后按精确串读回比较，不一致显式报错（注意注册表不随错误回滚，需人工核对）；PowerShell 调用统一 `[Console]::OutputEncoding = UTF8`，Windows PowerShell 5.1 下含中文等非 ASCII 的用户 PATH 读取不再产生乱码。
 
 ### Fixed
+
+- **`ssf finish` 主工作区误解析**：`cmd-finish.mjs` 此前以 changeDir 的 toplevel 作为 mainRoot，linked worktree 中解析到 worktree 自身，merge 变 no-op、物理归档失效；现统一从 worktree list 主条目解析。
+- **状态文件写盘可产生半截文件**：writeState 直接 writeFileSync 覆盖目标，中途终止留下损坏状态；改为原子写。
+- **Windows PATH 编码可破坏注册表**：PowerShell 5.1 输出按 OEM 代码页编码、被按 UTF-8 解码产生乱码，写回 HKCU 即破坏用户 Path；经 UTF8 OutputEncoding 与写后校验修复。
+- **isolate 的 cwd 警告写错目录**：ensure-branch 此前把警告写入源 change 目录（依赖后续复制顺序间接生效）；改为先复制再直接追加到 worktree 副本，源目录零副作用。
 
 - **proposal 解析器代码围栏幻影 delta**：`src/parsing/change-parser.ts` 的章节提取与 delta 扫描改为复用 `scanMarkdownLines`，围栏内的 `## Why`、`## ADDED Requirements` 等示例文本不再污染章节内容或产生幻影 delta；真实章节与 delta 的解析结果与修复前一致。
 - **中文与 REQ-ID 需求头漏识别**：`src/validation/validator.ts` 的需求名提取统一走 `REQUIREMENT_HEADER_REGEX`——`### 需求：x` 正确提取 "x"，`### REQ-AUTH-001: 令牌校验` 提取完整头文本（与 delta 解析口径一致）；代码围栏内的需求示例不再误判。
