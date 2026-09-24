@@ -11,6 +11,10 @@ import { runGuard } from '../../scripts/guard/guard.mjs';
 const ROOT = process.cwd();
 const CLI = join(ROOT, 'scripts', 'spec-superflow.mjs');
 const GUARD = join(ROOT, 'scripts', 'guard', 'guard.mjs');
+// 子进程统一无色环境：spawnSync 默认继承本进程环境，测试经 stdio:inherit 接到
+// 真 TTY 时 console.log(数字) 会输出 ANSI 颜色码，破坏精确串断言；NO_COLOR=1、
+// FORCE_COLOR=0 强制无色，使输出在 TTY 与管道下一致。
+const CHILD_ENV = { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' };
 const tempDirs = [];
 
 afterEach(() => {
@@ -90,6 +94,7 @@ describe('public command wrappers', () => {
     const result = spawnSync(process.execPath, [CLI, 'runtime', 'config', '--get', 'execution.inlineThreshold'], {
       cwd,
       encoding: 'utf8',
+      env: CHILD_ENV,
     });
 
     assert.equal(result.status, 0, result.stderr);
@@ -98,7 +103,10 @@ describe('public command wrappers', () => {
   });
 
   it('keeps the CLI validation failure, stderr, and exit code', () => {
-    const result = spawnSync(process.execPath, [CLI, 'runtime', 'asset', 'read', '../package.json'], { encoding: 'utf8' });
+    const result = spawnSync(process.execPath, [CLI, 'runtime', 'asset', 'read', '../package.json'], {
+      encoding: 'utf8',
+      env: CHILD_ENV,
+    });
 
     assert.equal(result.status, 2);
     assert.equal(result.stdout, '');
@@ -111,6 +119,7 @@ describe('public command wrappers', () => {
     const result = spawnSync(process.execPath, [GUARD, 'check', '.', 'specifying', 'bridging', '--json'], {
       cwd,
       encoding: 'utf8',
+      env: CHILD_ENV,
     });
 
     assert.equal(result.status, 0, result.stderr);
@@ -121,6 +130,7 @@ describe('public command wrappers', () => {
   it('keeps the guard validation failure, stderr, and exit code', () => {
     const result = spawnSync(process.execPath, [GUARD, 'check', '.', 'exploring', 'specifying', '--workflow', 'invalid'], {
       encoding: 'utf8',
+      env: CHILD_ENV,
     });
 
     assert.equal(result.status, 2);
