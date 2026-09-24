@@ -301,17 +301,39 @@ describe('execution control plane instructions', () => {
     assert.match(buildExecutor, /<wave-id>:<parallel\|serial>:<task,.+>\[:<depends-on/i);
   });
 
-  it('gives every packaged installer the same planned-execution gate', () => {
-    for (const path of [
-      'scripts/lib/install.mjs',
-      'scripts/lib/cmd-install-workbuddy.mjs',
-      'scripts/install-cursor.mjs',
-      'scripts/install-zcode.mjs',
-    ]) {
+  it('gives every packaged installer the same planned-execution gate', async () => {
+    // W3b-W2：正文已移入 phase-guard-template 单一模板。断言改为
+    // “安装器源码接入模板 + 各自渲染产物仍含同一道 planned-execution gate”，
+    // gate 强度不弱化（不再扫描安装器源码中的内嵌正文）。
+    const { renderPhaseGuard } = await import('../../scripts/lib/phase-guard-template.mjs');
+    const installers = [
+      {
+        path: 'scripts/lib/install.mjs',
+        importMatch: /from '\.\/phase-guard-template\.mjs'/,
+        guard: renderPhaseGuard('cline', { rulesFormat: 'md' }),
+      },
+      {
+        path: 'scripts/lib/cmd-install-workbuddy.mjs',
+        importMatch: /from '\.\/phase-guard-template\.mjs'/,
+        guard: renderPhaseGuard('workbuddy'),
+      },
+      {
+        path: 'scripts/install-cursor.mjs',
+        importMatch: /from '\.\/lib\/phase-guard-template\.mjs'/,
+        guard: renderPhaseGuard('cursor', { rulesFormat: 'mdc' }),
+      },
+      {
+        path: 'scripts/install-zcode.mjs',
+        importMatch: /from '\.\/lib\/phase-guard-template\.mjs'/,
+        guard: renderPhaseGuard('zcode', { rulesFormat: 'mdc' }),
+      },
+    ];
+    for (const { path, importMatch, guard } of installers) {
       const content = read(path);
-      assert.match(content, /Full.*legacy Hotfix/is);
-      assert.match(content, /Quick.*direct Hotfix.*tweak/is);
-      assert.match(content, /test_result: pass/);
+      assert.match(content, importMatch);
+      assert.match(guard, /Full.*legacy Hotfix/is);
+      assert.match(guard, /Quick.*direct Hotfix.*tweak/is);
+      assert.match(guard, /test_result: pass/);
     }
   });
 

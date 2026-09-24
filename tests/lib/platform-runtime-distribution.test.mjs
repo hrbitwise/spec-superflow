@@ -31,12 +31,20 @@ function skill(name) {
 }
 
 describe('canonical skill runtime protocol', () => {
-  it('publishes four-mode direct-path rules in generated Cursor and ZCODE assets', () => {
-    for (const path of ['scripts/install-cursor.mjs', 'scripts/install-zcode.mjs']) {
-      const content = readFileSync(join(ROOT, path), 'utf8');
-      assert.match(content, /Quick、direct Hotfix、tweak/);
-      assert.match(content, /Full 或 legacy Hotfix/);
-      assert.match(content, /test_result: pass/);
+  it('publishes four-mode direct-path rules via phase-guard-template in generated Cursor and ZCODE assets', async () => {
+    // W3b-W2：正文已移入单一模板；此处改为断言“安装器接入模板 + mdc 渲染产物含四模式条款”，
+    // 规则强度不变（不再扫描安装器源码中的内嵌正文）。
+    const { renderPhaseGuard } = await import('../../scripts/lib/phase-guard-template.mjs');
+    for (const [path, platformId] of [
+      ['scripts/install-cursor.mjs', 'cursor'],
+      ['scripts/install-zcode.mjs', 'zcode'],
+    ]) {
+      const source = readFileSync(join(ROOT, path), 'utf8');
+      assert.match(source, /from '\.\/lib\/phase-guard-template\.mjs'/);
+      const guard = renderPhaseGuard(platformId, { rulesFormat: 'mdc' });
+      assert.match(guard, /Quick、direct Hotfix、tweak/);
+      assert.match(guard, /Full 或 legacy Hotfix/);
+      assert.match(guard, /test_result: pass/);
     }
   });
 
