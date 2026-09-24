@@ -6,6 +6,7 @@ import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 let tempDir;
 
@@ -447,5 +448,51 @@ describe('cmd-doctor: checkRuntimeDistribution()', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('cmd-doctor: run() 默认路径退出码', () => {
+  let root;
+
+  // run() 内部以 process.cwd() 定位项目，故以子进程 + cwd 注入运行 ssf doctor
+  function runDoctor(cwd) {
+    try {
+      const stdout = execFileSync(process.execPath,
+        [join(process.cwd(), 'scripts', 'spec-superflow.mjs'), 'doctor'],
+        { cwd, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+      return { exitCode: 0, stdout, stderr: '' };
+    } catch (error) {
+      return {
+        exitCode: error.status ?? 1,
+        stdout: error.stdout?.toString() ?? '',
+        stderr: error.stderr?.toString() ?? error.message,
+      };
+    }
+  }
+
+  before(() => {
+    root = mkdtempSync(join(tmpdir(), 'ssf-doctor-run-'));
+  });
+
+  after(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('任一检查失败时以退出码 1 结束（注入非法配置 JSON）', () => {
+    // extractCliCatalog 要求 scripts/spec-superflow.mjs 存在，否则 run 会在
+    // 构建检查数组阶段直接抛错（dispatcher 兜底 exit 1）；放置最小占位文件，
+    // 使运行走到完整检查循环并打印汇总文案，再由退出码断言暴露缺陷。
+    mkdirSync(join(root, 'scripts'), { recursive: true });
+    writeFileSync(join(root, 'scripts', 'spec-superflow.mjs'), '// placeholder registry');
+    writeFileSync(join(root, 'spec-superflow.config.json'), '{ invalid json');
+    const result = runDoctor(root);
+    assert.equal(result.exitCode, 1, result.stdout);
+    assert.ok(result.stdout.includes('Some checks need attention'));
+  });
+
+  it('全部检查通过时以退出码 0 结束', () => {
+    const result = runDoctor(process.cwd());
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.ok(result.stdout.includes('All checks passed'));
   });
 });

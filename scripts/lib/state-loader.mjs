@@ -25,11 +25,17 @@ const BUILTIN_DEFAULTS = {
   dp_0_result: null,
   dp_0_confirmed: null,
   dp_0_timestamp: null,
+  dp_1_decisions: null,
   dp_1_result: null,
+  dp_1_confirmed: null,
   dp_1_timestamp: null,
+  dp_2_decisions: null,
   dp_2_result: null,
+  dp_2_confirmed: null,
   dp_2_timestamp: null,
+  dp_3_decisions: null,
   dp_3_result: null,
+  dp_3_confirmed: null,
   dp_3_timestamp: null,
   dp_4_result: null,
   dp_4_timestamp: null,
@@ -37,9 +43,13 @@ const BUILTIN_DEFAULTS = {
   dp_5_timestamp: null,
   dp_5_decisions: null,
   dp_5_confirmed: null,
+  dp_6_decisions: null,
   dp_6_result: null,
+  dp_6_confirmed: null,
   dp_6_timestamp: null,
+  dp_7_decisions: null,
   dp_7_result: null,
+  dp_7_confirmed: null,
   dp_7_timestamp: null,
 };
 
@@ -96,11 +106,17 @@ export function writeState(changeDir, state) {
   lines.push(`dp_0_result: ${state.dp_0_result ?? 'null'}`);
   lines.push(`dp_0_confirmed: ${state.dp_0_confirmed ?? 'null'}`);
   lines.push(`dp_0_timestamp: ${state.dp_0_timestamp ?? 'null'}`);
+  lines.push(`dp_1_decisions: ${state.dp_1_decisions ?? 'null'}`);
   lines.push(`dp_1_result: ${state.dp_1_result ?? 'null'}`);
+  lines.push(`dp_1_confirmed: ${state.dp_1_confirmed ?? 'null'}`);
   lines.push(`dp_1_timestamp: ${state.dp_1_timestamp ?? 'null'}`);
+  lines.push(`dp_2_decisions: ${state.dp_2_decisions ?? 'null'}`);
   lines.push(`dp_2_result: ${state.dp_2_result ?? 'null'}`);
+  lines.push(`dp_2_confirmed: ${state.dp_2_confirmed ?? 'null'}`);
   lines.push(`dp_2_timestamp: ${state.dp_2_timestamp ?? 'null'}`);
+  lines.push(`dp_3_decisions: ${state.dp_3_decisions ?? 'null'}`);
   lines.push(`dp_3_result: ${state.dp_3_result ?? 'null'}`);
+  lines.push(`dp_3_confirmed: ${state.dp_3_confirmed ?? 'null'}`);
   lines.push(`dp_3_timestamp: ${state.dp_3_timestamp ?? 'null'}`);
   lines.push(`dp_4_result: ${state.dp_4_result ?? 'null'}`);
   lines.push(`dp_4_timestamp: ${state.dp_4_timestamp ?? 'null'}`);
@@ -108,9 +124,13 @@ export function writeState(changeDir, state) {
   lines.push(`dp_5_timestamp: ${state.dp_5_timestamp ?? 'null'}`);
   lines.push(`dp_5_decisions: ${state.dp_5_decisions ?? 'null'}`);
   lines.push(`dp_5_confirmed: ${state.dp_5_confirmed ?? 'null'}`);
+  lines.push(`dp_6_decisions: ${state.dp_6_decisions ?? 'null'}`);
   lines.push(`dp_6_result: ${state.dp_6_result ?? 'null'}`);
+  lines.push(`dp_6_confirmed: ${state.dp_6_confirmed ?? 'null'}`);
   lines.push(`dp_6_timestamp: ${state.dp_6_timestamp ?? 'null'}`);
+  lines.push(`dp_7_decisions: ${state.dp_7_decisions ?? 'null'}`);
   lines.push(`dp_7_result: ${state.dp_7_result ?? 'null'}`);
+  lines.push(`dp_7_confirmed: ${state.dp_7_confirmed ?? 'null'}`);
   lines.push(`dp_7_timestamp: ${state.dp_7_timestamp ?? 'null'}`);
 
   fs.writeFileSync(filePath, lines.join('\n') + '\n', 'utf-8');
@@ -147,7 +167,7 @@ export function rebuildState(changeDir, { computeArtifactsHash, computeContractH
 }
 
 // Minimal YAML parser — top-level fields only, zero dependencies.
-// Handles strings, null, integers. No nested structures needed.
+// Handles strings, null, booleans, integers. No nested structures needed.
 function parseYaml(content) {
   const result = {};
   for (const line of content.split('\n')) {
@@ -158,6 +178,9 @@ function parseYaml(content) {
       const val = match[2].trim();
       if (val === 'null' || val === '') {
         result[match[1]] = null;
+      } else if (val === 'true' || val === 'false') {
+        // 布尔按 YAML 标量语义解析，保证 _confirmed 字段以布尔形态回读
+        result[match[1]] = val === 'true';
       } else if (/^\d+$/.test(val)) {
         result[match[1]] = parseInt(val, 10);
       } else {

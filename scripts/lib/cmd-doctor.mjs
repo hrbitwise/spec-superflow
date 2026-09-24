@@ -377,6 +377,10 @@ export async function run(args, { stdout = process.stdout, stderr = process.stde
   } else {
     console.log('✅ All checks passed.');
   }
+
+  // 与 doctor skills/vault 子命令及 dispatcher 的 { exitCode } 契约保持一致，
+  // 任一检查失败即返回 1，使 doctor 可用于 CI 门禁。
+  return { exitCode: hasFailure ? 1 : 0 };
 }
 
 export { checkVersionConsistency, checkHooks, checkCodexManifest, checkSkills, checkRuntimeDistribution, checkDist, checkRootPluginAuthor, checkNodeVersion, checkDocs, checkSkillConsistency, runVaultCheck };

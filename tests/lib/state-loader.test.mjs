@@ -2,7 +2,7 @@
 // Tests for scripts/lib/state-loader.mjs
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
@@ -62,7 +62,8 @@ describe('state-loader: readState()', () => {
     assert.equal(state.batches_completed, 3);
     assert.equal(state.test_result, 'pass');
     assert.equal(state.change_name, 'export-csv');
-    assert.equal(state.dp_0_confirmed, 'true');
+    // 布尔按 YAML 标量语义回读为布尔（修复前错误地为字符串 'true'）
+    assert.equal(state.dp_0_confirmed, true);
     assert.equal(state.dp_1_result, 'confirmed: add csv export');
   });
 
@@ -338,5 +339,56 @@ describe('state-loader: updateField()', () => {
     assert.equal(state.batches_completed, 3);
     // workflow should still be 'full'
     assert.equal(state.workflow, 'full');
+  });
+});
+
+describe('state-loader: DP _decisions/_confirmed 白名单字段持久化', () => {
+  let stateLoader;
+
+  before(async () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'ssf-state-dp-'));
+    const modulePath = join(process.cwd(), 'scripts/lib/state-loader.mjs');
+    stateLoader = await import(pathToFileURL(modulePath).href);
+  });
+
+  after(() => {
+    if (tempDir) rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('writeState/readState 完整回读 dp_1/2/3/6/7 的 decisions 与 confirmed', () => {
+    const dir = join(tempDir, 'dp-roundtrip');
+    mkdirSync(dir, { recursive: true });
+    const written = {
+      dp_1_decisions: 'scope: keep csv only', dp_1_confirmed: true,
+      dp_2_decisions: 'artifacts: spec reviewed', dp_2_confirmed: false,
+      dp_3_decisions: 'contract: clauses confirmed', dp_3_confirmed: true,
+      dp_6_decisions: 'verify: bounded checks', dp_6_confirmed: true,
+      dp_7_decisions: 'close: receipt archived', dp_7_confirmed: false,
+    };
+
+    stateLoader.writeState(dir, { state: 'specifying', ...written });
+    const read = stateLoader.readState(dir);
+
+    for (const [field, value] of Object.entries(written)) {
+      assert.equal(read[field], value, `${field} 回读值不一致`);
+      assert.equal(typeof read[field], typeof value, `${field} 回读类型不一致`);
+    }
+  });
+
+  it('updateField 逐字段写入后可回读，布尔保持布尔形态', () => {
+    const dir = join(tempDir, 'dp-update');
+    mkdirSync(dir, { recursive: true });
+    stateLoader.writeState(dir, { state: 'exploring' });
+
+    stateLoader.updateField(dir, 'dp_1_decisions', 'via updateField');
+    stateLoader.updateField(dir, 'dp_1_confirmed', true);
+    stateLoader.updateField(dir, 'dp_2_confirmed', false);
+
+    const read = stateLoader.readState(dir);
+    assert.equal(read.dp_1_decisions, 'via updateField');
+    assert.equal(read.dp_1_confirmed, true);
+    assert.equal(typeof read.dp_1_confirmed, 'boolean');
+    assert.equal(read.dp_2_confirmed, false);
+    assert.equal(typeof read.dp_2_confirmed, 'boolean');
   });
 });

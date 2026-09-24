@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -97,5 +97,60 @@ describe('ssf config --resolve-model', () => {
     assert.equal(runSsf(['config', '--resolve-model']).exitCode, 2);
     writeConfig({ models: {} });
     assert.equal(runSsf(['config', '--get', 'execution.inlineThreshold']).stdout.trim(), '3');
+  });
+});
+
+describe('ssf config --set 原型污染防护', () => {
+  // 在独立 cwd 下运行 config，便于断言配置文件未被创建
+  function runConfig(cwd, args) {
+    try {
+      const stdout = execFileSync(process.execPath, [CLI, 'config', ...args],
+        { cwd, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+      return { exitCode: 0, stdout, stderr: '' };
+    } catch (error) {
+      return {
+        exitCode: error.status ?? 1,
+        stdout: error.stdout?.toString() ?? '',
+        stderr: error.stderr?.toString() ?? error.message,
+      };
+    }
+  }
+
+  it('拒绝直接 __proto__ 污染键：退出码 2、stderr 含键名、不写盘', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'ssf-config-proto-'));
+    try {
+      const result = runConfig(cwd, ['--set', '__proto__.polluted=yes']);
+      assert.equal(result.exitCode, 2);
+      assert.ok(result.stderr.includes('__proto__'));
+      assert.equal(existsSync(join(cwd, 'spec-superflow.config.json')), false);
+      assert.equal({}.polluted, undefined);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('拒绝嵌套路径中的危险段 a.constructor.prototype.polluted：退出码 2、不写盘', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'ssf-config-nested-'));
+    try {
+      const result = runConfig(cwd, ['--set', 'a.constructor.prototype.polluted=yes']);
+      assert.equal(result.exitCode, 2);
+      assert.ok(result.stderr.includes('constructor') || result.stderr.includes('prototype'));
+      assert.equal(existsSync(join(cwd, 'spec-superflow.config.json')), false);
+      assert.equal({}.polluted, undefined);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('正常嵌套键 verification.language=zh 行为不变，正常写盘', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'ssf-config-normal-'));
+    try {
+      const result = runConfig(cwd, ['--set', 'verification.language=zh']);
+      assert.equal(result.exitCode, 0, result.stderr);
+      const written = JSON.parse(readFileSync(join(cwd, 'spec-superflow.config.json'), 'utf8'));
+      assert.equal(written.verification.language, 'zh');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
   });
 });
