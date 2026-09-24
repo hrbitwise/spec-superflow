@@ -21,7 +21,10 @@ function runRuntime(args, options = {}) {
   return spawnSync(process.execPath, [CLI, 'runtime', ...args], {
     cwd: options.cwd || ROOT,
     encoding: 'utf8',
-    env: { ...process.env, ...options.env },
+    // 强制子进程无色：测试进程经 stdio:inherit 接到真 TTY 时，console.log(数字)
+    // 会经 util.inspect 给数值加 ANSI 颜色（如 '\x1B[33m3\x1B[39m'），破坏精确串
+    // 断言；统一注入 NO_COLOR=1、FORCE_COLOR=0 使输出与管道环境一致、确定无色。
+    env: { ...process.env, ...options.env, NO_COLOR: '1', FORCE_COLOR: '0' },
   });
 }
 
