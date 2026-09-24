@@ -379,6 +379,73 @@ describe('Validator.validateImplementation', () => {
     assert.equal(completeness.status, 'FAIL');
     assert.ok(completeness.findings.some(f => f.message.includes('速率限制')));
   });
+
+  // W2：三种需求头（### Requirement: / ### 需求： / ### REQ-ID:）统一提取，
+  // 围栏内示例不提取；0 真实需求头时 Completeness 空集 WARN + CONDITIONAL。
+
+  it('需求头提取：中文/REQ-ID/标准三种头缺实现时均产生 CRITICAL', () => {
+    const report = validator.validateImplementation(
+      '重构缓存层 src/cache.ts',
+      [
+        '### 需求：速率限制',
+        '系统必须限制请求频率。',
+        '',
+        '### REQ-AUTH-001: 令牌校验',
+        '系统必须校验访问令牌。',
+        '',
+        '### Requirement: Audit logging',
+        'The system SHALL write audit logs.',
+      ].join('\n'),
+      '## Decisions\n本节无决策条目'
+    );
+    const completeness = report.dimensions.find(d => d.name === 'Completeness');
+    assert.equal(completeness.status, 'FAIL');
+    assert.equal(completeness.findings.length, 3);
+    assert.ok(completeness.findings.every(f => f.level === 'CRITICAL'));
+    assert.ok(completeness.findings.some(f => f.message.includes('速率限制')));
+    assert.ok(completeness.findings.some(f => f.message.includes('REQ-AUTH-001: 令牌校验')));
+    assert.ok(completeness.findings.some(f => f.message.includes('Audit logging')));
+    assert.equal(report.verdict, 'FAIL');
+  });
+
+  it('需求头提取：围栏内需求示例不提取，0 真实头 → Completeness WARN、verdict CONDITIONAL', () => {
+    const specContent = [
+      '# 某规格说明',
+      '',
+      '以下仅为示例：',
+      '',
+      '```markdown',
+      '### Requirement: 示例需求',
+      '这里是围栏内的示例内容。',
+      '```',
+      '',
+      '围栏外不存在真实需求头。',
+    ].join('\n');
+    const report = validator.validateImplementation(
+      '重构缓存层 src/cache.ts',
+      specContent,
+      '## Decisions\n本节无决策条目'
+    );
+    const completeness = report.dimensions.find(d => d.name === 'Completeness');
+    assert.equal(completeness.status, 'WARN');
+    assert.equal(completeness.findings.length, 1);
+    assert.equal(completeness.findings[0].level, 'WARN');
+    assert.ok(completeness.findings[0].message.includes('No verifiable requirement headers'));
+    assert.ok(!completeness.findings.some(f => f.message.includes('示例需求')));
+    assert.equal(report.verdict, 'CONDITIONAL');
+  });
+
+  it('需求头提取：标准 Requirement 头全覆盖时 PASS 路径不变', () => {
+    const report = validator.validateImplementation(
+      'Added rate limiting middleware in src/middleware/rate-limit.ts',
+      '### Requirement: Rate limiting\nThe system SHALL limit requests to 100 per minute.',
+      '## Decisions\n本节无决策条目'
+    );
+    const completeness = report.dimensions.find(d => d.name === 'Completeness');
+    assert.equal(completeness.status, 'PASS');
+    assert.equal(completeness.findings.length, 0);
+    assert.equal(report.verdict, 'PASS');
+  });
 });
 
 describe('tokenize', () => {
