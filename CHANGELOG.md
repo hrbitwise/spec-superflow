@@ -19,9 +19,14 @@ The format loosely follows Keep a Changelog.
 - **`ssf finish` 在隔离 worktree 内运行语义修复**：finish 的 mainRoot 改取 `git worktree list` 主条目后，从 linked worktree 发起也能正确合并主工作区（此前为静默 no-op）；worktree 输出畸形（空/缺 path/路径不存在）时 fail-closed 退出、不执行 merge；主路径 git 调用由 2 次减为 1 次。
 - **状态文件写入原子化**：state-loader 的 writeState 改用 temp+rename 的 atomicWrite——并发/崩溃场景读者恒得完整旧版或新版；Windows 下目标被第三方以非删除共享占用时，写入由静默覆盖变显式 EPERM 失败；文件文本逐字节不变。
 - **PATH 写入新增读回校验**：writeWindowsUserPath 写后按精确串读回比较，不一致显式报错（注意注册表不随错误回滚，需人工核对）；PowerShell 调用统一 `[Console]::OutputEncoding = UTF8`，Windows PowerShell 5.1 下含中文等非 ASCII 的用户 PATH 读取不再产生乱码。
+- **phase-guard 全文单一模板化**：13 个写 guard 平台的规则正文统一由 `scripts/lib/phase-guard-template.mjs` 的 renderPhaseGuard 生成，6 份安装器内嵌文本（共享安装器、cursor、zcode、codebuddy、trae、workbuddy）全部删除；除标题 platformId 与按格式/alwaysApply 生成的 frontmatter 外，全部平台正文逐字一致。
+- **Quick 边界条款全平台统一 long**：cursor、zcode、codebuddy、trae、workbuddy 5 个平台补齐 Quick long 条款（≤3 单模块文件边界、触及 PRD/Spec/API/数据权限/跨模块风险时展示 Quick/Full 选择、Quick 须记录 tdd/new-test/bounded 验证策略）；此前仅共享安装器包含该条款。
+- **frontmatter 与页脚规则化**：mdc frontmatter 的 description 改为固定文案；页脚统一为通用生成说明，不再硬编码安装脚本文件名；codebuddy 条件应用 blockquote 经参数保留。
 
 ### Fixed
 
+- **6 份 phase-guard 正文漂移**：安装器各自维护硬编码文本导致 Quick 条款与 frontmatter/页脚长期不一致；现收敛为单一模板源，安装器落盘路径与文件名不变。
+- **qoder 安装器零覆盖**：CI platform-install-smoke 循环清单补 qoder、cursor、zcode，断言规则文件含 Quick long 内容（mdc 另断言 frontmatter）；qoder 脱离零覆盖。
 - **`ssf finish` 主工作区误解析**：`cmd-finish.mjs` 此前以 changeDir 的 toplevel 作为 mainRoot，linked worktree 中解析到 worktree 自身，merge 变 no-op、物理归档失效；现统一从 worktree list 主条目解析。
 - **状态文件写盘可产生半截文件**：writeState 直接 writeFileSync 覆盖目标，中途终止留下损坏状态；改为原子写。
 - **Windows PATH 编码可破坏注册表**：PowerShell 5.1 输出按 OEM 代码页编码、被按 UTF-8 解码产生乱码，写回 HKCU 即破坏用户 Path；经 UTF8 OutputEncoding 与写后校验修复。
