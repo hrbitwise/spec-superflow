@@ -408,16 +408,20 @@ export class Validator {
         });
         // --- Correctness ---
         const correctnessFindings = [];
-        const placeholderPatterns = ['TODO', 'FIXME', 'HACK', 'XXX', 'PLACEHOLDER'];
-        for (const pattern of placeholderPatterns) {
-            if (diffSummary.includes(pattern)) {
-                correctnessFindings.push({
-                    level: 'CRITICAL',
-                    dimension: 'Correctness',
-                    message: VERIFICATION_MESSAGES.VERIFICATION_PLACEHOLDER_DETECTED,
-                });
-                break;
-            }
+        // 使用 \b 词边界匹配占位符标记：标记两侧必须为单词字符（[A-Za-z0-9_]）
+        // 与非单词字符的交界，避免 HACKERONE/HACKATHON/HACKER/XXXX/TODOX/MYTODO
+        // 等仅含标记子串的正常单词被误报（裸 includes 会误命中这些词）。
+        // i 标志使检测大小写不敏感：修复前仅大写被拦截，修复后小写独立标记
+        // （如 hack this、// todo: fix）同样 FAIL，拦截面只增不减。
+        // CJK 字符不属于 \w，故 ASCII 标记与中日韩文字交界（如 TODO中文待补）
+        // 同样构成词边界，标记仍被检出。
+        const PLACEHOLDER_PATTERN = /\b(TODO|FIXME|HACK|XXX|PLACEHOLDER)\b/i;
+        if (PLACEHOLDER_PATTERN.test(diffSummary)) {
+            correctnessFindings.push({
+                level: 'CRITICAL',
+                dimension: 'Correctness',
+                message: VERIFICATION_MESSAGES.VERIFICATION_PLACEHOLDER_DETECTED,
+            });
         }
         dimensions.push({
             name: 'Correctness',

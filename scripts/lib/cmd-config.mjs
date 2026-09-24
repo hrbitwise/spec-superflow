@@ -3,6 +3,18 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadConfig, getDefaults, resolveModelProfile } from './config-loader.mjs';
 
+/**
+ * 遍历嵌套路径各段，任一段命中 __proto__/constructor/prototype 即抛错；
+ * 错误信息包含被拒键名，供 config 写盘前的原型污染防护使用。
+ */
+export function isDangerousKey(parts) {
+  for (const segment of parts) {
+    if (segment === '__proto__' || segment === 'constructor' || segment === 'prototype') {
+      throw new Error(`Refusing to set dangerous config key '${segment}' (prototype pollution protection)`);
+    }
+  }
+}
+
 export async function run(args) {
   const config = loadConfig(process.cwd());
 
@@ -69,6 +81,14 @@ export async function run(args) {
 
     // Set the nested value
     const parts = path.split('.');
+    // 写盘前硬拒绝原型危险键：任一段命中即向 stderr 报错并退出 2，
+    // 不进入后续对象遍历，因此不会写盘或修改对象原型链。
+    try {
+      isDangerousKey(parts);
+    } catch (error) {
+      console.error(error.message);
+      process.exit(2);
+    }
     let target = fileConfig;
     for (let i = 0; i < parts.length - 1; i++) {
       if (!target[parts[i]] || typeof target[parts[i]] !== 'object') {

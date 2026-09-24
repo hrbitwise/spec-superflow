@@ -499,3 +499,41 @@ describe('cmd-state: error handling', () => {
     assert.equal(result.exitCode, 2);
   });
 });
+
+describe('cmd-state: DP decisions/confirmed 字段端到端持久化', () => {
+  before(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'ssf-state-dp-e2e-'));
+    writeFileSync(join(tempDir, 'proposal.md'), '## Why\nTest proposal for DP field persistence end to end.\n## What Changes\n- Persist decisions and confirmation fields.');
+  });
+
+  after(() => {
+    if (tempDir) rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('10 个白名单字段写入后经 state get 原样回读，布尔以布尔形态回读', () => {
+    assert.equal(ssf(`state init ${tempDir}`).exitCode, 0);
+    const cases = [
+      ['dp_1_decisions', 'scope: keep csv only'], ['dp_1_confirmed', 'true'],
+      ['dp_2_decisions', 'artifacts: spec reviewed'], ['dp_2_confirmed', 'true'],
+      ['dp_3_decisions', 'contract: clauses confirmed'], ['dp_3_confirmed', 'false'],
+      ['dp_6_decisions', 'verify: bounded checks'], ['dp_6_confirmed', 'true'],
+      ['dp_7_decisions', 'close: receipt archived'], ['dp_7_confirmed', 'false'],
+    ];
+
+    for (const [field, rawValue] of cases) {
+      const setResult = ssfArgs(['state', 'set', tempDir, field, rawValue]);
+      assert.equal(setResult.exitCode, 0, `${field} 写入失败: ${setResult.stderr}`);
+
+      const getResult = ssfArgs(['state', 'get', tempDir, field, '--json']);
+      assert.equal(getResult.exitCode, 0, `${field} 读取失败`);
+      const payload = JSON.parse(getResult.stdout);
+
+      if (field.endsWith('_confirmed')) {
+        assert.equal(typeof payload.value, 'boolean', `${field} 应回读为布尔`);
+        assert.equal(payload.value, rawValue === 'true', `${field} 布尔值不一致`);
+      } else {
+        assert.equal(payload.value, rawValue, `${field} 字符串值不一致`);
+      }
+    }
+  });
+});

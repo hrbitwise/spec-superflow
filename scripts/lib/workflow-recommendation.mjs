@@ -428,9 +428,12 @@ function normalizeExclusionChecks(value = {}) {
   return result;
 }
 
-function isLightweightPath(path) {
-  return !path.startsWith('/') && !path.split('/').includes('..')
-    && LIGHTWEIGHT_PATH_PREFIXES.some(prefix => path.startsWith(prefix));
+// 判定受影响路径是否属于轻量（Quick/Tweak）内部路径：入口先把反斜杠归一
+// 化为正斜杠（兼容 Windows 分隔符），再做绝对路径、目录遍历、内部前缀判定。
+export function isLightweightPath(path) {
+  const normalized = String(path).replace(/\\/g, '/');
+  return !normalized.startsWith('/') && !normalized.split('/').includes('..')
+    && LIGHTWEIGHT_PATH_PREFIXES.some(prefix => normalized.startsWith(prefix));
 }
 
 function withoutHash(record) {

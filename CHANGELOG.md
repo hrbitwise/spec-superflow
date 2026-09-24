@@ -10,6 +10,20 @@ The format loosely follows Keep a Changelog.
 
 - **design 模板新增「边界与分层判定（Boundary Check）」必填节**：`templates/design.md` 在「目标与非目标」与「决策」之间插入固定节，把分层归属判定前移到设计阶段——归属层（平台内核层 / 行业包层 / 客户定制层，单仓库项目可映射为通用模块层 / 业务模块层 / 配置层）、三问判定理由（全产品通用？→内核层；同行业共享？→行业包层；单客户特化？→定制层）、仓库与模块落点、扩展方式优先级自查（配置 > 低代码/配置化 > SPI 扩展点 > 新增模块 > 改内核/通用层，并说明上一级为何解决不了）、5 条通用禁止项自查（直依赖通用层 Impl、为单客户/单行业改内核、跨模块直注他模块 Mapper、绕过公开接口直写共享表、在通用层放行业语义实体），以及项目边界契约引用（内核层变更附下游影响面）。模板保持产品无关，不内置任何特定产品的包名或接口；具体契约由项目侧规则文件绑定。命中禁止项为 specifying 回退而非 DP-2 修补；Quick、direct Hotfix、tweak 等无 design 工件的轻量路径免填。`skills/spec-writer/SKILL.md` 的 design.md 生成要求与 Validation Checklist 同步更新；设计依据见 `docs/designs/2026-09-23-design-template-boundary-check.md`。
 
+### Changed
+
+- **`ssf doctor` 默认路径检查失败时退出码 0 → 1**：与 `doctor skills`、`doctor vault` 子命令语义对齐，doctor 可用于 CI 门禁；检查全部通过仍退出 0。CI 中此前「检查实际失败但绿灯」的场景将变红。
+- **占位符检测大小写不敏感**：`src/validation/validator.ts` 的 Correctness 检测从裸子串 `includes` 改为词边界正则 `/\b(TODO|FIXME|HACK|XXX|PLACEHOLDER)\b/i`。小写独立标记（如 `hack this later`、`// todo: fix`）新增 FAIL；`HACKERONE`、`HACKATHON`、`XXXX` 等包含标记子串的正常单词不再误报；`TODOX`、`MYTODO` 不命中。注意：`_TODO_`、`TODO_VALUE`、`TODO123` 因下划线/数字属单词字符不再 FAIL——这些形态为代码标识符而非占位符；标记后紧邻中日韩文字（`TODO中文待补`）仍命中。
+
+### Fixed
+
+- **Windows 远程安装必失败：4 处硬编码 `/tmp`**：`scripts/lib/install.mjs`、`scripts/install-cursor.mjs`、`scripts/install-zcode.mjs`、`scripts/lib/cmd-install-workbuddy.mjs` 的临时 clone 目录统一改用 `os.tmpdir()`（此前 Windows 解析为当前盘 `\tmp`，目录默认不存在即 ENOENT）；共享安装器覆盖的 9 个平台及 Cursor/ZCode/WorkBuddy 远程安装恢复正常。存量 Windows 用户须重跑对应安装命令才会更新已落盘的 hooks 配置。
+- **Cursor/ZCode 的 SessionStart hook 路径 Windows 归一化**：hook 命令统一为 `bash "<正斜杠绝对路径>"`（复用 CodeBuddy 安装器已验证写法），反斜杠路径在 Git Bash 下不再失效，含空格路径不被截断。
+- **轻量路径判定兼容反斜杠**：`workflow-recommendation` 判定前将路径反斜杠归一化，Windows 下 `tests\foo.ts` 正确识别为内部路径，`..\` 目录遍历仍被拦截。
+- **`ssf state set` 10 个 DP 字段静默丢失**：`state-loader` 序列化补齐 dp_1/dp_2/dp_3/dp_6/dp_7 的 `_decisions`、`_confirmed`；状态文件 YAML 的 `true`/`false` 标量按布尔解析，回读类型与写入一致。自行解析状态文件并与字符串 `'true'` 比较的外部脚本需适配。
+- **`ssf config --set` 原型污染防护**：嵌套键路径任一段命中 `__proto__`、`constructor`、`prototype` 即报错退出（2）、不写盘。
+- **文档平台计数统一为 20**：README（中英文）、INSTALL、平台矩阵此前三处计数/条目不一致（矩阵缺 ZCODE、INSTALL 缺 Qoder）；已发布的 `npx spec-superflow@latest install-trae` 一键命令补记入用户文档，矩阵 Trae 行 Rules 更正为 `user_rules/ · md`。
+
 ## [1.3.4] - 2026-09-21
 
 ### Fixed

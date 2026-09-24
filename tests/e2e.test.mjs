@@ -272,6 +272,73 @@ describe('Validator.validateImplementation', () => {
     assert.equal(correctness.status, 'FAIL');
   });
 
+  // 构造最小输入跑 validateImplementation，仅取 Correctness 维度状态
+  function correctnessStatus(diffSummary) {
+    const report = validator.validateImplementation(
+      diffSummary,
+      '### Requirement: Auth middleware\nThe system SHALL authenticate all API requests.',
+      '## Decisions\n### Decision 1\n- Choice: JWT\n- Rationale: stateless'
+    );
+    return report.dimensions.find(d => d.name === 'Correctness').status;
+  }
+
+  it('placeholder 词边界：含标记子串的正常单词 PASS（HACKERONE/HACKATHON/HACKER/XXXX）', () => {
+    // 标记后仍接单词字符时 \b 不成立，正常单词不得误报
+    for (const diff of [
+      'Added integration with the HACKERONE disclosure program',
+      'Joined the internal HACKATHON event',
+      'Fixed the HACKER profile lookup edge case',
+      'Masked the secret value as XXXX in the log output',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'PASS', `expected PASS for: ${diff}`);
+    }
+  });
+
+  it('placeholder 词边界：大写独立标记仍 FAIL（与修复前一致）', () => {
+    for (const diff of [
+      'Added auth middleware. TODO: implement rate limiting',
+      'FIXME: handle the null token branch',
+      'HACK before release',
+      'redacted XXX in the test fixture',
+      'replace the PLACEHOLDER config value',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'FAIL', `expected FAIL for: ${diff}`);
+    }
+  });
+
+  it('placeholder 词边界：小写独立标记 FAIL（大小写不敏感，拦截面增强）', () => {
+    for (const diff of [
+      'will hack this later',
+      '// todo: fix before merge',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'FAIL', `expected FAIL for: ${diff}`);
+    }
+  });
+
+  it('placeholder 词边界：粘连词 TODOX/MYTODO PASS，标点相邻 TODO: remove/(HACK) FAIL', () => {
+    for (const diff of [
+      'Renamed the TODOX helper to pending-list',
+      'removed the MYTODO comment block',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'PASS', `expected PASS for: ${diff}`);
+    }
+    for (const diff of [
+      'TODO: remove dead code',
+      '(HACK) temporary shim',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'FAIL', `expected FAIL for: ${diff}`);
+    }
+  });
+
+  it('placeholder 词边界：标记紧邻 CJK 文字仍 FAIL（ASCII/CJK 交界构成边界）', () => {
+    for (const diff of [
+      'TODO中文待补',
+      'FIXME：修正',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'FAIL', `expected FAIL for: ${diff}`);
+    }
+  });
+
   it('passes when all requirements covered and no placeholders', () => {
     const report = validator.validateImplementation(
       'Added JWT auth middleware in src/middleware/auth.ts, rate limiter in src/middleware/rate-limit.ts',

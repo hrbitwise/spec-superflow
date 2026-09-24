@@ -410,7 +410,8 @@ describe('ssf debug', () => {
     assert.equal(payload.attempt_count, 3);
     const state = readState(changeDir);
     assert.match(state.dp_5_result, /^continue:/);
-    assert.equal(state.dp_5_confirmed, 'true');
+    // 布尔按 YAML 标量语义回读为布尔（修复前错误地为字符串 'true'）
+    assert.equal(state.dp_5_confirmed, true);
     assert.match(state.dp_5_timestamp, /^\d{4}-\d{2}-\d{2}T/);
 
     const laterAttempt = record('attempt-4');

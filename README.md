@@ -105,7 +105,7 @@ gemini extensions install https://github.com/hrbitwise/spec-superflow
 gemini extensions update spec-superflow   # 升级
 ```
 
-### 更多平台（Cline / Kiro / Windsurf / Qwen / Amazon Q / Roo Code / Continue / Pi / Qoder / OpenCode / WorkBuddy / CodeBuddy / Trae）
+### 更多平台（Cline / Kiro / Windsurf / Qwen / Amazon Q / Roo Code / Continue / Pi / Qoder / OpenCode / WorkBuddy / CodeBuddy / Trae / ZCODE）
 
 | 平台 | 安装方式 | 状态 |
 |------|---------|------|
@@ -121,9 +121,10 @@ gemini extensions update spec-superflow   # 升级
 | **OpenCode** | `.opencode/plugins/spec-superflow.js` 或 `.agents/skills -> skills/` | 已提供入口 |
 | **WorkBuddy** | `npx spec-superflow@latest install-workbuddy` | 已提供安装器 |
 | **CodeBuddy Code CLI** | `npx spec-superflow@latest install-codebuddy` | 已提供安装器 |
-| **Trae IDE / TRAE Work** | `.trae/skills/`、`~/.trae/skills/` 或上传 zip/.skill | 手动/导入 |
+| **Trae IDE / TRAE Work** | `npx spec-superflow@latest install-trae`（备选：`.trae/skills/`、`~/.trae/skills/` 或上传 zip/.skill） | 已提供安装器 |
+| **ZCODE** | `npx spec-superflow@latest install-zcode` | 已提供安装器 |
 
-> 共支持 19 个平台，完整安装说明见 [INSTALL.md](INSTALL.md)，支持矩阵见 [docs/platform-matrix.md](docs/platform-matrix.md)。
+> 共支持 20 个平台，完整安装说明见 [INSTALL.md](INSTALL.md)，支持矩阵见 [docs/platform-matrix.md](docs/platform-matrix.md)。
 
 ### CLI 工具链
 
@@ -172,6 +173,8 @@ npx spec-superflow list          # 或通过 npx 使用
 | `ssf install-continue` | 部署到 Continue `.continue/` + `.continue/rules/` |
 | `ssf install-pi` | 部署到 Pi `.pi/skills/`（无规则目录） |
 | `ssf install-qoder` | 部署到 Qoder `.qoder/` + `.qoder/rules/` |
+| `ssf install-trae` | 部署到 Trae `~/.trae/skills/`（或 `~/.trae-cn/skills/`）+ `user_rules/` |
+| `ssf install-zcode` | 部署到 ZCODE `.zcode/skills/` + `.zcode/rules/` |
 
 > **CodeBuddy 安装与 PATH**：`npx spec-superflow@latest install-codebuddy` 无需全局安装即可用——安装器把 skills/rules/hooks 部署到 `~/.codebuddy/`，并在 `~/.codebuddy/spec-superflow/bin/` 生成 `ssf` 命令 shim（Windows 为 `ssf.cmd`/`ssf.ps1`）。默认会把 bin 目录注册到用户 PATH（Windows 写入用户级环境变量，POSIX 追加到 shell 配置文件），新开终端即可直接使用 `ssf` 命令；`--no-path` 跳过 PATH 修改（shim 仍会生成），`--dry-run` 仅预览安装计划不落盘。
 

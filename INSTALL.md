@@ -13,6 +13,8 @@
 
 ## 平台总览
 
+下表覆盖全部 **20 个**平台的安装 / 升级 / 卸载方式。
+
 | 平台 | 安装 | 升级 | 卸载 |
 |------|------|------|------|
 | Claude Code | marketplace | `/plugin update` | `/plugin uninstall` |
@@ -24,7 +26,7 @@
 | OpenCode | plugin entry / skills 目录 | `git pull` | 删除 plugin/skills |
 | WorkBuddy | `ssf install-workbuddy` | 重新运行安装器 | 删除 marketplace 插件并禁用 |
 | CodeBuddy Code CLI | `ssf install-codebuddy` | 重新运行安装器 | `ssf uninstall-codebuddy` |
-| Trae IDE / TRAE Work | `.trae/skills` / 上传 zip 或 .skill / marketplace | `git pull` + 重新导入 | UI 卸载或删除技能目录 |
+| Trae IDE / TRAE Work | `ssf install-trae`（备选：`.trae/skills` / 上传 zip 或 .skill / marketplace） | 重新运行安装器 | UI 卸载或删除技能目录 |
 | Cline | `ssf install-cline` | 重新运行脚本 | 删除 `.cline/skills/`、`.clinerules/` |
 | Kiro | `ssf install-kiro` | 重新运行脚本 | 删除 `.kiro/skills/`、`.kiro/steering/` |
 | Windsurf | `ssf install-windsurf` | 重新运行脚本 | 删除 `.windsurf/skills/`、`.windsurf/rules/` |
@@ -33,6 +35,7 @@
 | Roo Code | `ssf install-roocode` | 重新运行脚本 | 删除 `.roo/skills/`、`.roo/rules/` |
 | Continue | `ssf install-continue` | 重新运行脚本 | 删除 `.continue/skills/`、`.continue/rules/` |
 | Pi | `ssf install-pi` | 重新运行脚本 | 删除 `.pi/skills/` |
+| Qoder | `ssf install-qoder` | 重新运行脚本 | 删除 `.qoder/skills/`、`.qoder/rules/` |
 | ZCODE | `ssf install-zcode` | 重新运行脚本 | 删除 `.zcode/skills/`、`.zcode/rules/` |
 
 ---
@@ -515,7 +518,19 @@ cat ~/.codebuddy/spec-superflow/package.json | grep version   # 期望版本，�
 
 Trae IDE / TRAE Work 原生支持 `SKILL.md`。项目技能目录是 `.trae/skills/`，全局技能目录是 `~/.trae/skills/`；TRAE Work 也支持上传包含根级 `SKILL.md` 的 zip 或 `.skill` 文件，并可从内置 skill marketplace 安装。
 
-### 安装（本地目录）
+### 一键安装（推荐）
+
+```bash
+npx spec-superflow@latest install-trae
+```
+
+安装器自动部署 9 个 skills 到 `~/.trae-cn/skills/`（国际版为 `~/.trae/skills/`；同名第三方 skills 保留）、运行时依赖到 `~/.trae-cn/spec-superflow/`，并把常驻 phase-guard 写入 `~/.trae-cn/user_rules/phase-guard.md`（纯 md，自动加载）。重新运行即就地升级，加 `--dry-run` 可先预览。
+
+> 一键安装不会把 `ssf` 注册到终端 PATH；需要在 shell 里直接使用 `ssf` 命令时，见下方「让 CLI 可用」。
+
+以下手动 cp / npm link 方式作为离线或自定义场景的备选。
+
+### 手动安装（备选：本地目录）
 
 ```bash
 git clone https://github.com/hrbitwise/spec-superflow.git
@@ -532,7 +547,7 @@ cp -R spec-superflow/skills/* ~/.trae/skills/
 
 ### 让 CLI 可用（推荐）
 
-Trae 的安装方式**只复制 skill 文本**到 `.trae/skills/` 或 `~/.trae/skills/`，**不部署仓库的 `scripts/` 目录**。但 spec-superflow 的每个 skill 里每一步都会调用 `ssf` CLI（状态初始化、执行计划、review、checkpoint 等）。没有 CLI，智能体读到指令后会在 shell 里报 `command not found`，整条链路就断了。
+上述手动方式**只复制 skill 文本**到 `.trae/skills/` 或 `~/.trae/skills/`，**不部署仓库的 `scripts/` 目录**。但 spec-superflow 的每个 skill 里每一步都会调用 `ssf` CLI（状态初始化、执行计划、review、checkpoint 等）。没有 CLI，智能体读到指令后会在 shell 里报 `command not found`，整条链路就断了。
 
 三种方式让 `ssf` 命令可用，按推荐顺序排列：
 
