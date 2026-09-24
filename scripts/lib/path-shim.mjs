@@ -287,13 +287,28 @@ export function removePosixExportLine(rcPath, binDir, { home = homedir(), shell 
 
 // ─── user PATH adapters (Windows) ─────────────────────────
 
-/** Default PowerShell executor used on Windows. Injectable for tests. */
-export function powershellExec(script) {
+/**
+ * UTF-8 输出编码前缀：Windows PowerShell 5.1 默认按 OEM 代码页输出，含中文
+ * 的 PATH 会乱码；在脚本开头强制 [Console]::OutputEncoding=UTF8 后，Node 端
+ * 以 UTF-8 解码即可得到原文。对 pwsh 7 同样安全（其默认编码本就是 UTF-8）。
+ */
+const POWERSHELL_UTF8_PREFIX = '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;';
+
+/** 默认 PowerShell 子进程执行器：保持 -NoProfile -NonInteractive -Command 经 argv 传参。 */
+function defaultRunPowerShell(script) {
   return execFileSync(
     resolvePowershellExecutable(),
     ['-NoProfile', '-NonInteractive', '-Command', script],
     { encoding: 'utf-8' },
-  ).trim();
+  );
+}
+
+/**
+ * Default PowerShell executor used on Windows. Injectable for tests: 第二参数
+ * 可注入底层子进程执行器，便于断言实际执行脚本的编码前缀。
+ */
+export function powershellExec(script, run = defaultRunPowerShell) {
+  return run(`${POWERSHELL_UTF8_PREFIX}${script}`).trim();
 }
 
 /**
@@ -324,8 +339,18 @@ export async function writeWindowsUserPath(value, executor = powershellExec) {
   // PowerShell single-quoted strings are literal (only '' escapes a quote),
   // so backslashes in Windows paths are preserved verbatim. JSON.stringify
   // would double them because PowerShell treats backslash as an ordinary char.
-  const quoted = `'${String(value).replace(/'/g, "''")}'`;
+  const expected = String(value);
+  const quoted = `'${expected.replace(/'/g, "''")}'`;
   executor(`[Environment]::SetEnvironmentVariable('Path', ${quoted}, 'User')`);
+  // 写后读回精确校验：编码错乱、权限异常或注册表被外部改写一律收口为显式
+  // 错误，绝不静默结束。REG_EXPAND_SZ 语义（值含 % 时按可展开类型保存）由
+  // [Environment]::SetEnvironmentVariable 的 .NET 实现保证，此处不改其调用。
+  const readback = await readWindowsUserPath(executor);
+  if (readback !== expected) {
+    throw new Error(
+      `PATH 写后校验失败：写入值与读回值不一致。\n写入值：${expected}\n读回值：${readback}`,
+    );
+  }
 }
 
 // ─── unified apply / remove ───────────────────────────────
