@@ -15,6 +15,7 @@ import {
   normalizeRequirementName,
   extractRequirementsSection,
   scanMarkdownLines,
+  REQUIREMENT_HEADER_REGEX,
 } from '../parsing/requirement-blocks.js';
 
 const SCENARIO_HEADER_REGEX = /^####\s+Scenario:/i;
@@ -458,6 +459,16 @@ export class Validator {
         });
       }
     }
+    if (requirements.length === 0) {
+      // 空集不做真空 PASS：未找到任何可校验需求头意味着工件可能无法解析（D4），
+      // 输出 WARN 交人复核。维度状态沿用既有公式——无 CRITICAL 但 findings
+      // 非空即 WARN；总体 verdict 随之自动推导为 CONDITIONAL，阻止自动绿灯。
+      completenessFindings.push({
+        level: 'WARN',
+        dimension: 'Completeness',
+        message: 'No verifiable requirement headers found in spec (expected ### Requirement: / ### 需求： / ### REQ-...)',
+      });
+    }
     dimensions.push({
       name: 'Completeness',
       status: completenessFindings.some(f => f.level === 'CRITICAL') ? 'FAIL' : completenessFindings.length > 0 ? 'WARN' : 'PASS',
@@ -517,12 +528,19 @@ export class Validator {
     return { dimensions, verdict };
   }
 
+  // 提取 spec 中围栏外的全部需求头名称：遍历 scanMarkdownLines 的行结构，
+  // 跳过代码围栏内文本（围栏内示例标题 MUST NOT 提取），对非围栏行匹配统一的
+  // REQUIREMENT_HEADER_REGEX。捕获组口径与 requirement-blocks 的
+  // requirementName() 完全一致：标准 Requirement: 与中文 需求： 头取组 1
+  // （冒号后文本），REQ-...: 头取组 2（完整头文本）。
   private extractRequirementNames(specContent: string): string[] {
-    const regex = /### Requirement:\s*(.+)/g;
     const names: string[] = [];
-    let match;
-    while ((match = regex.exec(specContent)) !== null) {
-      names.push(match[1].trim());
+    for (const { text, fenced } of scanMarkdownLines(specContent)) {
+      if (fenced) continue;
+      const match = text.match(REQUIREMENT_HEADER_REGEX);
+      if (match) {
+        names.push(normalizeRequirementName(match[1] ?? match[2]));
+      }
     }
     return names;
   }

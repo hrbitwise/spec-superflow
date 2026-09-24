@@ -6,9 +6,7 @@ export const MAX_REQUIREMENT_TEXT_LENGTH = 500;
 export const MAX_DELTAS_PER_CHANGE = 10;
 
 export const VALIDATION_MESSAGES = {
-  SCENARIO_EMPTY: 'Scenario text cannot be empty',
   REQUIREMENT_EMPTY: 'Requirement text cannot be empty',
-  REQUIREMENT_NO_SHALL: 'Requirement must contain SHALL or MUST keyword',
   REQUIREMENT_NO_SCENARIOS: 'Requirement must have at least one scenario',
   SPEC_NAME_EMPTY: 'Spec name cannot be empty',
   SPEC_PURPOSE_EMPTY: 'Purpose section cannot be empty',
@@ -19,8 +17,6 @@ export const VALIDATION_MESSAGES = {
   CHANGE_WHAT_EMPTY: 'What Changes section cannot be empty',
   CHANGE_NO_DELTAS: 'Change must have at least one delta',
   CHANGE_TOO_MANY_DELTAS: `Consider splitting changes with more than ${MAX_DELTAS_PER_CHANGE} deltas`,
-  DELTA_SPEC_EMPTY: 'Spec name cannot be empty',
-  DELTA_DESCRIPTION_EMPTY: 'Delta description cannot be empty',
 
   PURPOSE_TOO_BRIEF: `Purpose section is too brief (less than ${MIN_PURPOSE_LENGTH} characters)`,
   REQUIREMENT_TOO_LONG: `Requirement text is very long (>${MAX_REQUIREMENT_TEXT_LENGTH} characters). Consider breaking it down.`,
@@ -40,14 +36,9 @@ export const VALIDATION_MESSAGES = {
 export const VERIFICATION_DIMENSIONS = ['Completeness', 'Correctness', 'Coherence'] as const;
 
 export const VERIFICATION_MESSAGES = {
-  COMPLETENESS_MISSING_TASK: 'Task in tasks.md has no corresponding code change in diff summary',
   COMPLETENESS_MISSING_REQUIREMENT: 'SHALL/MUST requirement in spec has no matching implementation in diff summary: {requirement}',
-  CORRECTNESS_TEST_FAILURE: 'Test suite has failures',
-  CORRECTNESS_MISSING_SCENARIO: 'Spec scenario has no corresponding test assertion',
-  COHERENCE_NAMING_MISMATCH: 'Design decision naming does not match implementation naming',
   COHERENCE_PATTERN_MISSING: 'Architecture pattern from design.md not found in implementation: {pattern}',
   VERIFICATION_PLACEHOLDER_DETECTED: 'Diff summary contains placeholder markers (TODO, FIXME, HACK)',
-  CONFLICT_DETECTED: 'Requirement "{requirement}" is modified by multiple changes: {changes}',
 } as const;
 
 export const MIN_ABANDONMENT_REASON_LENGTH = 50;

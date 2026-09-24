@@ -4,9 +4,7 @@ export declare const MAX_WHY_SECTION_LENGTH = 1000;
 export declare const MAX_REQUIREMENT_TEXT_LENGTH = 500;
 export declare const MAX_DELTAS_PER_CHANGE = 10;
 export declare const VALIDATION_MESSAGES: {
-    readonly SCENARIO_EMPTY: "Scenario text cannot be empty";
     readonly REQUIREMENT_EMPTY: "Requirement text cannot be empty";
-    readonly REQUIREMENT_NO_SHALL: "Requirement must contain SHALL or MUST keyword";
     readonly REQUIREMENT_NO_SCENARIOS: "Requirement must have at least one scenario";
     readonly SPEC_NAME_EMPTY: "Spec name cannot be empty";
     readonly SPEC_PURPOSE_EMPTY: "Purpose section cannot be empty";
@@ -17,8 +15,6 @@ export declare const VALIDATION_MESSAGES: {
     readonly CHANGE_WHAT_EMPTY: "What Changes section cannot be empty";
     readonly CHANGE_NO_DELTAS: "Change must have at least one delta";
     readonly CHANGE_TOO_MANY_DELTAS: "Consider splitting changes with more than 10 deltas";
-    readonly DELTA_SPEC_EMPTY: "Spec name cannot be empty";
-    readonly DELTA_DESCRIPTION_EMPTY: "Delta description cannot be empty";
     readonly PURPOSE_TOO_BRIEF: "Purpose section is too brief (less than 50 characters)";
     readonly REQUIREMENT_TOO_LONG: "Requirement text is very long (>500 characters). Consider breaking it down.";
     readonly DELTA_DESCRIPTION_TOO_BRIEF: "Delta description is too brief";
@@ -30,13 +26,8 @@ export declare const VALIDATION_MESSAGES: {
 };
 export declare const VERIFICATION_DIMENSIONS: readonly ["Completeness", "Correctness", "Coherence"];
 export declare const VERIFICATION_MESSAGES: {
-    readonly COMPLETENESS_MISSING_TASK: "Task in tasks.md has no corresponding code change in diff summary";
     readonly COMPLETENESS_MISSING_REQUIREMENT: "SHALL/MUST requirement in spec has no matching implementation in diff summary: {requirement}";
-    readonly CORRECTNESS_TEST_FAILURE: "Test suite has failures";
-    readonly CORRECTNESS_MISSING_SCENARIO: "Spec scenario has no corresponding test assertion";
-    readonly COHERENCE_NAMING_MISMATCH: "Design decision naming does not match implementation naming";
     readonly COHERENCE_PATTERN_MISSING: "Architecture pattern from design.md not found in implementation: {pattern}";
     readonly VERIFICATION_PLACEHOLDER_DETECTED: "Diff summary contains placeholder markers (TODO, FIXME, HACK)";
-    readonly CONFLICT_DETECTED: "Requirement \"{requirement}\" is modified by multiple changes: {changes}";
 };
 export declare const MIN_ABANDONMENT_REASON_LENGTH = 50;
