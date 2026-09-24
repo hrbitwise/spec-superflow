@@ -1,6 +1,8 @@
 // scripts/lib/state-loader.mjs — lightweight .spec-superflow.yaml state file reader/writer
 import fs from 'node:fs';
 import path from 'node:path';
+// 复用 plan-shared 的原子写（同目录 temp + rename），避免崩溃留下半截状态文件
+import { atomicWrite } from './plan-shared.mjs';
 
 const STATE_FILE = '.spec-superflow.yaml';
 
@@ -133,7 +135,9 @@ export function writeState(changeDir, state) {
   lines.push(`dp_7_confirmed: ${state.dp_7_confirmed ?? 'null'}`);
   lines.push(`dp_7_timestamp: ${state.dp_7_timestamp ?? 'null'}`);
 
-  fs.writeFileSync(filePath, lines.join('\n') + '\n', 'utf-8');
+  // 原子落盘：temp + rename，崩溃或 rename 失败时目标文件保持上一完整版本；
+  // rename 失败错误直接向上抛出（atomicWrite 内部不吞错，writeState/updateField 亦不捕获）
+  atomicWrite(filePath, lines.join('\n') + '\n');
 }
 
 /**

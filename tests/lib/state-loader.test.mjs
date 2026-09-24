@@ -2,10 +2,11 @@
 // Tests for scripts/lib/state-loader.mjs
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync, mkdirSync, renameSync, openSync, closeSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
+import { spawn, execSync } from 'node:child_process';
 
 let tempDir;
 
@@ -390,5 +391,145 @@ describe('state-loader: DP _decisions/_confirmed 白名单字段持久化', () =
     assert.equal(typeof read.dp_1_confirmed, 'boolean');
     assert.equal(read.dp_2_confirmed, false);
     assert.equal(typeof read.dp_2_confirmed, 'boolean');
+  });
+});
+
+describe('state-loader: 原子写入（atomic-state）', () => {
+  let stateLoader;
+
+  before(async () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'ssf-state-atomic-'));
+    const modulePath = join(process.cwd(), 'scripts/lib/state-loader.mjs');
+    // Windows-safe dynamic import: bare Windows paths (D:\...) are not valid
+    // ESM import specifiers, so convert to a file:// URL.
+    stateLoader = await import(pathToFileURL(modulePath).href);
+  });
+
+  after(() => {
+    if (tempDir) rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // 轮询等待外部占用锁生效/释放，避免固定 sleep 造成抖动
+  async function waitFor(predicate, timeoutMs, label) {
+    const deadline = Date.now() + timeoutMs;
+    let lastError;
+    while (Date.now() < deadline) {
+      try {
+        if (predicate()) return;
+      } catch (error) {
+        lastError = error;
+      }
+      await sleep(40);
+    }
+    throw new Error(`等待${label}超时${lastError ? `：${lastError.code || lastError.message}` : ''}`);
+  }
+
+  it('rename 失败时 updateField 抛错且目标文件保持旧内容', { skip: process.platform !== 'win32' && '占用锁注入仅支持 Windows（FileShare 不含 Delete）' }, async () => {
+    const dir = join(tempDir, 'rename-fail');
+    mkdirSync(dir, { recursive: true });
+    stateLoader.writeState(dir, { state: 'exploring', change_name: 'keep-old' });
+    const filePath = join(dir, '.spec-superflow.yaml');
+    const oldBytes = readFileSync(filePath);
+
+    // 外部进程以「共享读写、不共享删除」方式占用目标文件：rename 需要 DELETE 访问会被拒（EPERM），
+    // 而旧实现的直接 writeFileSync 因共享读写反而能成功——以此区分原子写与旧的直写覆盖。
+    const script = `$fs=[System.IO.File]::Open('${filePath}',[System.IO.FileMode]::Open,[System.IO.FileAccess]::ReadWrite,[System.IO.FileShare]::ReadWrite); Start-Sleep -Seconds 30; $fs.Close()`;
+    const locker = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      stdio: 'ignore',
+    });
+
+    try {
+      // 等待占用句柄生效：探测 rename 失败即锁已生效；探测期间若意外 rename 成功则恢复旧内容
+      await waitFor(() => {
+        const probe = join(dir, 'probe.tmp');
+        writeFileSync(probe, 'probe');
+        try {
+          renameSync(probe, filePath);
+          writeFileSync(filePath, oldBytes); // 锁未生效，恢复夹具继续等待
+          return false;
+        } catch {
+          return true;
+        }
+      }, 10000, '占用锁生效');
+      assert.equal(locker.exitCode, null, '持锁进程不应提前退出');
+
+      // rename 失败错误必须经 writeState/updateField 上抛，不能静默成功
+      assert.throws(
+        () => stateLoader.updateField(dir, 'state', 'executing'),
+        /EPERM|EACCES|EBUSY|permission|busy/i,
+      );
+    } finally {
+      locker.kill();
+    }
+
+    // 等待句柄释放后读回：目标文件必须逐字节保持上一完整版本
+    await waitFor(() => {
+      const fd = openSync(filePath, 'r+');
+      closeSync(fd);
+      return true;
+    }, 10000, '占用锁释放');
+
+    const keptBytes = readFileSync(filePath);
+    assert.ok(Buffer.compare(keptBytes, oldBytes) === 0, 'rename 失败后目标文件必须保持旧版内容');
+    assert.equal(stateLoader.readState(dir).state, 'exploring');
+  });
+
+  it('正常写入文本与修复前逐字节一致（字段/顺序/单个结尾换行）', async () => {
+    // 取修复前 main（bdd80c9，359a9b4 修复之前）的 state-loader 源码作为对照实现；
+    // 不能用 HEAD：修复后版本依赖 plan-shared.mjs，拷到临时目录 import 会 ERR_MODULE_NOT_FOUND
+    const oldSource = execSync('git show bdd80c9:scripts/lib/state-loader.mjs', { encoding: 'utf8' });
+    const oldModuleFile = join(tempDir, 'old-state-loader.mjs');
+    writeFileSync(oldModuleFile, oldSource);
+    const oldLoader = await import(pathToFileURL(oldModuleFile).href);
+
+    // 覆盖全部字段、多类型值与非 ASCII 文本，验证字段/顺序/UTF-8 编码不变
+    const state = {
+      state: 'executing',
+      workflow: 'full',
+      revision: 2,
+      artifacts_hash: 'sha256:abcdef',
+      contract_hash: 'sha256:012345',
+      execution_mode: 'inline',
+      execution_plan_hash: 'sha256:plan',
+      execution_plan_revision: 1,
+      batches_completed: 3,
+      test_result: 'pass',
+      spec_merged: false,
+      spec_publication_receipt: null,
+      change_name: '字节一致-变更',
+      last_transition: '2026-09-24T00:00:00Z',
+      last_transition_from: 'exploring',
+      last_transition_to: 'specifying',
+      dp_0_decisions: '范围：仅导出 CSV；技术：nestjs',
+      dp_0_result: 'confirmed: scope 范围',
+      dp_0_confirmed: true,
+      dp_0_timestamp: '2026-09-24T01:00:00Z',
+      dp_1_decisions: 'artifacts: spec reviewed',
+      dp_1_result: 'confirmed: tech',
+      dp_1_confirmed: false,
+      dp_1_timestamp: '2026-09-24T02:00:00Z',
+    };
+    for (let i = 2; i <= 7; i++) {
+      state[`dp_${i}_decisions`] = `dp${i} 决策内容`;
+      state[`dp_${i}_result`] = `confirmed: dp${i}`;
+      state[`dp_${i}_confirmed`] = i % 2 === 0;
+      state[`dp_${i}_timestamp`] = `2026-09-24T0${i}:00:00Z`;
+    }
+
+    const oldDir = join(tempDir, 'old-out');
+    const newDir = join(tempDir, 'new-out');
+    mkdirSync(oldDir, { recursive: true });
+    mkdirSync(newDir, { recursive: true });
+    oldLoader.writeState(oldDir, state);
+    stateLoader.writeState(newDir, state);
+
+    const oldBytes = readFileSync(join(oldDir, '.spec-superflow.yaml'));
+    const newBytes = readFileSync(join(newDir, '.spec-superflow.yaml'));
+    assert.ok(Buffer.compare(oldBytes, newBytes) === 0, '原子写输出必须与修复前逐字节一致');
+    // 文件必须以单个换行结尾
+    assert.equal(newBytes[newBytes.length - 1], 0x0a, '文件必须以换行结尾');
+    assert.notEqual(newBytes[newBytes.length - 2], 0x0a, '结尾只允许一个换行');
   });
 });

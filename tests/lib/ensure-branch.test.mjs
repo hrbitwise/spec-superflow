@@ -6,7 +6,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, readFileSync, realpathSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -227,13 +227,16 @@ describe('worktree-lifecycle R1/R2: submodule init + progress cwd warning', () =
       writeFileSync(join(changeDir, 'proposal.md'), 'x');
 
       const r = run(`"${changeDir}" sm-change`);
-      const worktree = join(base, 'main-sm-change');
+      // worktree 路径可能以 8.3 短名形式出现，统一用 native realpath 规范化。
+      const worktree = realpathSync.native(join(base, 'main-sm-change'));
 
       assert.equal(r.ok, true, r.out);
       assert.equal(existsSync(join(worktree, 'subA', 'a.txt')), true, 'outer submodule content must be ready');
       assert.equal(existsSync(join(worktree, 'subA', 'subB', 'b.txt')), true, 'nested submodule content must be ready');
-      // R2: progress ledger is created even when its directory did not exist.
-      assert.equal(existsSync(join(changeDir, '.superpowers', 'sdd', 'progress.md')), true, 'progress.md must be created');
+      // R2/D4：警告账本只在 worktree 副本中创建（目录原本不存在），
+      // 源 change 目录不得被写入（连 progress.md 都不应出现）。
+      assert.equal(existsSync(join(worktree, 'changes', 'sm-change', '.superpowers', 'sdd', 'progress.md')), true, 'worktree 副本 progress.md 必须被创建');
+      assert.equal(existsSync(join(changeDir, '.superpowers', 'sdd', 'progress.md')), false, '源 change 目录不得被写入 progress.md');
     } finally {
       rmRetry(base);
     }
@@ -287,16 +290,27 @@ describe('worktree-lifecycle R1/R2: submodule init + progress cwd warning', () =
       makeRepo(main);
       const changeDir = join(main, 'changes', 'pg-change');
       mkdirSync(join(changeDir, '.superpowers', 'sdd'), { recursive: true });
-      writeFileSync(join(changeDir, '.superpowers', 'sdd', 'progress.md'), 'EXISTING RECORD\n');
+      const sourceProgress = join(changeDir, '.superpowers', 'sdd', 'progress.md');
+      writeFileSync(sourceProgress, 'EXISTING RECORD\n');
+      // 记录源账本的 mtime，用于断言 isolate 对源目录零副作用。
+      const beforeStat = statSync(sourceProgress);
+      const beforeContent = readFileSync(sourceProgress, 'utf8');
 
       const r = run(`"${changeDir}" pg-change`);
       // ensure-branch 写入 progress 的隔离路径来自 `git rev-parse
       // --show-toplevel`（长路径形式）；CI Windows 的 TEMP 是 8.3 短名，
       // 断言必须用 native realpath 规范化后的形式比较。
       const worktree = realpathSync.native(join(base, 'main-pg-change'));
+      const worktreeProgress = join(worktree, 'changes', 'pg-change', '.superpowers', 'sdd', 'progress.md');
 
       assert.equal(r.ok, true, r.out);
-      const progress = readFileSync(join(changeDir, '.superpowers', 'sdd', 'progress.md'), 'utf8');
+      // 源 change 目录：内容与 mtime 均不被本次 isolate 改动。
+      const afterStat = statSync(sourceProgress);
+      assert.equal(readFileSync(sourceProgress, 'utf8'), beforeContent, '源 progress.md 内容必须保持不变');
+      assert.equal(afterStat.mtimeMs, beforeStat.mtimeMs, '源 progress.md mtime 必须保持不变');
+      assert.equal(afterStat.size, beforeStat.size, '源 progress.md 大小必须保持不变');
+      // worktree 副本：保留原有记录，并在其后追加 cwd 警告（原警告内容）。
+      const progress = readFileSync(worktreeProgress, 'utf8');
       assert.match(progress, /EXISTING RECORD/);
       assert.ok(progress.indexOf('EXISTING RECORD') < progress.indexOf('cwd 警告'), 'existing record preserved, warning appended');
       assert.match(progress, /cwd 警告/);

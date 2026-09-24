@@ -453,3 +453,115 @@ describe('ssf finish — 一键收尾（worktree-lifecycle R3/R5）', () => {
     assert.equal(git(main, 'log', '--merges', '-1', '--format=%H'), '', 'no merge commit may be created');
   });
 });
+
+// ssf finish mainRoot 解析（worktree-mechanics W3a）：
+// 进程内注入 runGit——worktree list 返回预置 porcelain（主+linked 两条目），
+// rev-parse --show-toplevel 返回 linked 路径（模拟修复前的错误事实源），
+// 其余 git 调用透传真实 git。mergeRoots 记录每次 merge 的 -C 根目录。
+function runFinishWithInjectedList(changeDir, cwd, porcelain, extraArgs = []) {
+  const mergeRoots = [];
+  const toplevelCalls = [];
+  const out = [];
+  const err = [];
+  const io = { stdout: { write: s => out.push(s) }, stderr: { write: s => err.push(s) } };
+  const realRunGit = (args, options) => execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=test', ...args], {
+    encoding: 'utf8', ...(options || {}),
+  });
+  const runGit = (args, options) => {
+    // worktree list 一律返回注入的 porcelain（无论 -C 指向哪里）
+    if (args.includes('worktree') && args.includes('list')) return porcelain;
+    // 旧实现以此命令取 mainRoot；记录调用但返回 linked 路径
+    if (args.includes('rev-parse') && args.includes('--show-toplevel')) {
+      toplevelCalls.push(args[1]);
+      return cwd;
+    }
+    if (args.includes('merge')) mergeRoots.push(args[1]);
+    return realRunGit(args, options);
+  };
+  const prevCwd = process.cwd();
+  process.chdir(cwd);
+  try {
+    const result = finishRun([changeDir, ...extraArgs], io, runGit);
+    return {
+      exitCode: result?.exitCode ?? 0,
+      stdout: out.join(''),
+      stderr: err.join(''),
+      all: `${out.join('')}\n${err.join('')}`,
+      mergeRoots,
+      toplevelCalls,
+    };
+  } finally {
+    process.chdir(prevCwd);
+  }
+}
+
+describe('ssf finish — mainRoot 取 worktree list 主条目（worktree-mechanics W3a）', () => {
+  it('linked worktree 场景：worktree list 返回主+linked 两条目、rev-parse toplevel 返回 linked → merge 在主路径执行（非 no-op）、收尾完成', () => {
+    const base = mkdtempSync(join(tmpdir(), 'ssf-finish-w3a-linked-'));
+    tempDirs.push(base);
+    const { main, changeDir, worktree } = createIsolatedWorktree(base, 'finish-w3a-linked');
+    commitFileInWorktree(worktree, 'feature.txt', 'branch work');
+    // porcelain 路径用 native realpath 形式（与真实 git 输出一致，规避 8.3 短名）
+    const mainReal = realpathSync.native(main);
+    const wtReal = realpathSync.native(worktree);
+    const porcelain =
+      `worktree ${mainReal}\n` +
+      'HEAD 0000000000000000000000000000000000000000\n' +
+      'branch refs/heads/main\n' +
+      '\n' +
+      `worktree ${wtReal}\n` +
+      'HEAD 1111111111111111111111111111111111111111\n' +
+      'branch refs/heads/finish-w3a-linked\n';
+
+    const r = runFinishWithInjectedList(
+      changeDir, wtReal, porcelain, ['--test-cmd', 'node -e "process.exit(0)"']
+    );
+
+    assert.equal(r.exitCode, 0, r.all);
+    // merge 恰好一次且 -C 根为主工作区路径（而非 linked worktree）
+    assert.equal(r.mergeRoots.length, 1, `merge must be called once, got ${r.mergeRoots.length}`);
+    assert.equal(
+      resolve(r.mergeRoots[0]).toLowerCase(),
+      resolve(mainReal).toLowerCase(),
+      `merge must run in main root, got ${r.mergeRoots[0]}`
+    );
+    // 主仓库真实产生 merge commit（旧实现在 linked 路径 merge 会 Already up to date → no-op）
+    const mergeCommit = git(main, 'log', '--merges', '-1', '--format=%H');
+    assert.ok(mergeCommit, 'a real merge commit must exist in main repo');
+    assert.ok(r.all.includes(mergeCommit), 'report must include merge commit');
+    // worktree/分支真实清理
+    assert.equal(existsSync(worktree), false, 'worktree must be removed');
+    assert.equal(git(main, 'branch', '--list', 'finish-w3a-linked'), '', 'isolated branch must be deleted');
+  });
+
+  // 畸形输出 fail-closed：空输出 / 首条目缺 path / 首条目 path 不存在。
+  const malformedVariants = [
+    ['list 为空', () => ''],
+    ['首条目缺 path', () =>
+      // 首块只有 branch 行、没有 worktree 行；第二条目永远不会被使用
+      'branch refs/heads/main\n' +
+      '\n' +
+      `worktree ${join(tmpdir(), 'ssf-w3a-extra-linked-' + Date.now())}\n` +
+      'branch refs/heads/finish-w3a-malformed\n'],
+    ['首条目 path 不存在', () =>
+      `worktree ${join(tmpdir(), 'ssf-w3a-no-such-main-' + Date.now())}\n` +
+      'branch refs/heads/main\n' +
+      '\n' +
+      `worktree ${join(tmpdir(), 'ssf-w3a-no-such-linked-' + Date.now())}\n` +
+      'branch refs/heads/finish-w3a-malformed\n'],
+  ];
+  for (const [label, makePorcelain] of malformedVariants) {
+    it(`畸形输出 fail-closed（${label}）：非零退出、stderr 说明无法确定主工作区、merge 零调用`, () => {
+      const base = mkdtempSync(join(tmpdir(), 'ssf-finish-w3a-bad-'));
+      tempDirs.push(base);
+      const changeDir = join(base, 'changes', 'finish-w3a-malformed');
+      mkdirSync(changeDir, { recursive: true });
+
+      const r = runFinishWithInjectedList(changeDir, base, makePorcelain());
+
+      assert.equal(r.exitCode, 1, r.all);
+      assert.match(r.stderr, /无法确定主工作区/, `stderr must report main root unresolved, got: ${r.stderr}`);
+      assert.equal(r.mergeRoots.length, 0, 'no merge may be executed on malformed list');
+    });
+  }
+});
