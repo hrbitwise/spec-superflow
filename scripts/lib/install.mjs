@@ -17,6 +17,7 @@
 import { existsSync, mkdirSync, readdirSync, statSync, rmSync } from 'node:fs';
 import { cp, writeFile, mkdtemp } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
@@ -48,8 +49,14 @@ async function fetchLatestTag() {
   return data.tag_name;
 }
 
+// 在系统临时目录（os.tmpdir()：Windows 解析到用户 Temp，POSIX 为系统临时
+// 目录）下创建唯一的远程 release clone 工作目录，避免硬编码 POSIX 专用路径。
+export async function createTempCloneDir() {
+  return mkdtemp(join(tmpdir(), 'spec-superflow-'));
+}
+
 async function cloneRelease(tag) {
-  const tmpDir = await mkdtemp(join('/tmp', 'spec-superflow-'));
+  const tmpDir = await createTempCloneDir();
   const url = `https://github.com/${GITHUB_REPO}.git`;
   console.log(`📥 Cloning ${tag} into ${tmpDir} ...`);
   execFileSync('git', ['clone', '--depth', '1', '--branch', tag, url, tmpDir], {

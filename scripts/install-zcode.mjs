@@ -7,9 +7,10 @@
 // correctly. Also copies skills to .zcode/skills/ (where ZCODE reads them).
 //
 // Defaults to the latest GitHub release; use --local <path> to deploy from a local repo.
-import { existsSync, mkdirSync, readdirSync, statSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, realpathSync, statSync, rmSync } from 'node:fs';
 import { cp, writeFile, mkdtemp } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
@@ -42,7 +43,7 @@ async function fetchLatestTag() {
 }
 
 async function cloneRelease(tag) {
-  const tmpDir = await mkdtemp(join('/tmp', 'spec-superflow-'));
+  const tmpDir = await mkdtemp(join(tmpdir(), 'spec-superflow-'));
   const url = `https://github.com/${GITHUB_REPO}.git`;
   console.log(`📥 Cloning ${tag} into ${tmpDir} ...`);
   execFileSync('git', ['clone', '--depth', '1', '--branch', tag, url, tmpDir], {
@@ -143,13 +144,20 @@ alwaysApply: true
   await writeFile(join(targetRules, 'phase-guard.mdc'), content, 'utf-8');
 }
 
+// 构造 SessionStart hook 命令：反斜杠路径全部归一为正斜杠并以双引号包裹，
+// 形状 bash "<路径>"，与 CodeBuddy 安装器行为对齐（Windows 走 Git Bash）。
+export function buildSessionStartCommand(scriptPath) {
+  const normalized = String(scriptPath).replace(/\\/g, '/');
+  return `bash "${normalized}"`;
+}
+
 async function writeZCODEHooks(hooksDir) {
   ensureDir(join(targetRoot, '.zcode'));
   const hooksJson = {
     hooks: [
       {
         event: 'sessionStart',
-        command: `bash ${join(hooksDir, 'session-start')}`,
+        command: buildSessionStartCommand(join(hooksDir, 'session-start')),
       },
     ],
   };
@@ -234,7 +242,10 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error(`❌ ${err.message}`);
-  process.exit(1);
-});
+// 仅在作为入口脚本直接运行时执行安装；被 import 时只导出纯函数（如供测试）。
+if (process.argv[1] && realpathSync(resolve(process.argv[1])) === fileURLToPath(import.meta.url)) {
+  main().catch(err => {
+    console.error(`❌ ${err.message}`);
+    process.exit(1);
+  });
+}
