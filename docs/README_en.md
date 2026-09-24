@@ -99,7 +99,7 @@ gemini extensions update spec-superflow   # upgrade
 | **OpenCode** | `.opencode/plugins/spec-superflow.js` or `.agents/skills -> skills/` | Entry provided |
 | **WorkBuddy** | `npx spec-superflow@latest install-workbuddy` | Installer provided |
 | **CodeBuddy Code CLI** | `npx spec-superflow@latest install-codebuddy` | Installer provided |
-| **Trae IDE / TRAE Work** | `.trae/skills/`, `~/.trae/skills/`, or zip/.skill upload | Manual/import |
+| **Trae IDE / TRAE Work** | `npx spec-superflow@latest install-trae` (alternatives: `.trae/skills/`, `~/.trae/skills/`, or zip/.skill upload) | Installer provided |
 | **Cline** | `npx spec-superflow@latest install-cline` | Installer provided |
 | **Kiro** | `npx spec-superflow@latest install-kiro` | Installer provided |
 | **Windsurf** | `npx spec-superflow@latest install-windsurf` | Installer provided |
@@ -109,9 +109,9 @@ gemini extensions update spec-superflow   # upgrade
 | **Continue** | `npx spec-superflow@latest install-continue` | Installer provided |
 | **Pi** | `npx spec-superflow@latest install-pi` | Installer provided |
 | **Qoder** | `npx spec-superflow@latest install-qoder` | Installer provided |
-| **ZCODE** | `ssf install-zcode` | Installer provided |
+| **ZCODE** | `npx spec-superflow@latest install-zcode` | Installer provided |
 
-> spec-superflow supports 19 platforms. See [INSTALL.md](../INSTALL.md) and the [platform matrix](platform-matrix.md) for the full matrix.
+> spec-superflow supports 20 platforms. See [INSTALL.md](../INSTALL.md) and the [platform matrix](platform-matrix.md) for the full matrix.
 
 ### CLI Toolchain
 
@@ -144,6 +144,8 @@ npm install -g spec-superflow
 | `ssf install-workbuddy` | Deploy to WorkBuddy marketplace and enable skills |
 | `ssf install-codebuddy` | Deploy to `~/.codebuddy/` (CodeBuddy Code CLI) |
 | `ssf uninstall-codebuddy` | Remove spec-superflow from `~/.codebuddy/` (CodeBuddy Code CLI) |
+| `ssf install-trae` | Deploy to Trae `~/.trae/skills/` (or `~/.trae-cn/skills/`) + `user_rules/` |
+| `ssf install-zcode` | Deploy to ZCODE `.zcode/skills/` + `.zcode/rules/` |
 
 > **CodeBuddy install & PATH**: `npx spec-superflow@latest install-codebuddy` works without a global install — the installer deploys skills/rules/hooks into `~/.codebuddy/` and generates a `ssf` command shim under `~/.codebuddy/spec-superflow/bin/` (`ssf.cmd`/`ssf.ps1` on Windows). By default it registers the bin dir on the user PATH (user-level environment variable on Windows, shell rc file on POSIX), so a new terminal can call `ssf` directly; `--no-path` skips the PATH change (shims are still written), and `--dry-run` only prints the plan without touching the disk.
 

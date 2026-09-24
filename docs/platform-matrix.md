@@ -1,6 +1,6 @@
 # 平台支持矩阵
 
-spec-superflow 共支持 **19 个** AI 编程平台。每个平台按三层接入：
+spec-superflow 共支持 **20 个** AI 编程平台。每个平台按三层接入：
 
 - **Skills** — 9 个 skill 部署到平台技能目录（`${CLAUDE_PLUGIN_ROOT}` 重写为绝对路径）。
 - **Rules** — phase-guard 规则文件部署到平台规则目录，被平台自动加载为常驻上下文（守卫机制）。
@@ -19,7 +19,7 @@ spec-superflow 共支持 **19 个** AI 编程平台。每个平台按三层接�
 | 7 | OpenCode | ✅ | `.opencode/` · md | — |
 | 8 | WorkBuddy | ✅ | `marketplace plugin rules/` · md | — |
 | 9 | CodeBuddy Code CLI | ✅ | `~/.codebuddy/rules/` · md (`alwaysApply:false`) | ✅ SessionStart (`settings.json`) |
-| 10 | Trae | ✅ | — | — |
+| 10 | Trae | ✅ | `user_rules/` · md | — |
 | 11 | Cline | ✅ | `.clinerules/`（项目根）· md | — |
 | 12 | Kiro | ✅ | `.kiro/steering/` · md | — ¹ |
 | 13 | Windsurf | ✅ | `.windsurf/rules/` · md | — ¹ |
@@ -29,6 +29,7 @@ spec-superflow 共支持 **19 个** AI 编程平台。每个平台按三层接�
 | 17 | Continue | ✅ | `.continue/rules/` · md | — |
 | 18 | Pi | ✅ | —（无规则目录） | — |
 | 19 | Qoder | ✅ | `.qoder/rules/` · md | — |
+| 20 | ZCODE | ✅ | `.zcode/rules/` · mdc | ✅ sessionStart |
 
 > ¹ Kiro / Windsurf / Qwen / Amazon Q 平台原生支持 hooks（comet 源码确认 hookFormat 分别为 kiro / windsurf / qwen / claude-code），但 spec-superflow 的 SessionStart 钩子在这些平台的可用性尚未逐一验证，故 v0.8.13 暂不写入 hook 配置，避免塞入失效配置。上下文注入由 phase-guard 规则（平台自动加载）承担。后续版本将逐平台验证后补齐。
 
@@ -42,7 +43,7 @@ Codex manifest 通过 `"hooks": {}` 抑制 `hooks/hooks.json` 自动发现，因
 
 ```bash
 npx spec-superflow@latest install-<id>
-# <id> ∈ {cline, kiro, windsurf, qwen, amazon-q, roocode, continue, pi, qoder, cursor, workbuddy, codebuddy}
+# <id> ∈ {cline, kiro, windsurf, qwen, amazon-q, roocode, continue, pi, qoder, cursor, workbuddy, codebuddy, trae, zcode}
 ```
 
-Claude Code / Codex / Copilot / Gemini / OpenCode / Trae 走各自 marketplace 或本地目录，详见 [INSTALL.md](../INSTALL.md)。
+Claude Code / Codex / Copilot / Gemini / OpenCode 走各自 marketplace 或本地目录，详见 [INSTALL.md](../INSTALL.md)。`trae` 的规则写入用户级 `user_rules/`（Trae 自动加载，非项目 rules 目录）；`zcode` 写入项目内 `.zcode/rules/`。
