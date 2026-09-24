@@ -119,20 +119,22 @@ function initSubmodules(contextDir) {
   }
 }
 
-// Append a cwd-persistence warning to the change's progress ledger. The ledger
-// (and its parent directories) is created when missing; existing content is
-// never overwritten.
-function writeProgressWarning(contextDir) {
-  const progressDir = join(changeDir, '.superpowers', 'sdd');
+// 将 cwd 持久化警告直接追加到“隔离上下文内 change 副本”的 progress 账本：
+// worktree 成功路径 worktreeRoot = worktreePath（警告落 worktree 副本，
+// 源 change 目录零副作用）；git switch 回退路径 worktreeRoot = repoRoot，
+// 此时副本即原地（join(repoRoot, changeRelativePath) === changeDir）。
+// 账本及父目录缺失时创建；已有内容绝不覆盖（D4）。
+function writeProgressWarning(worktreeRoot) {
+  const progressDir = join(worktreeRoot, changeRelativePath, '.superpowers', 'sdd');
   const progressFile = join(progressDir, 'progress.md');
   mkdirSync(progressDir, { recursive: true });
   const entry = [
     '',
     '## cwd 警告（ensure-branch 自动写入）',
     '',
-    `- 隔离上下文：\`${contextDir}\``,
+    `- 隔离上下文：\`${worktreeRoot}\``,
     '- Bash cwd 不持续：每条命令都会回到会话初始目录，不会记住上一次的 cd',
-    `- 强制规则：后续实现编辑必须使用隔离上下文内的绝对路径，或每条命令以前缀 \`cd ${contextDir} &&\` 开头`,
+    `- 强制规则：后续实现编辑必须使用隔离上下文内的绝对路径，或每条命令以前缀 \`cd ${worktreeRoot} &&\` 开头`,
     '',
   ].join('\n');
   appendFileSync(progressFile, entry, 'utf-8');
@@ -151,8 +153,10 @@ if (worktreeCreated) {
   if (!initSubmodules(worktreePath)) {
     process.exit(1);
   }
-  writeProgressWarning(worktreePath);
+  // 顺序要求（D4）：先把源 change 目录复制进 worktree，再向 worktree 副本
+  // 追加警告——警告直写最终落点，源 change 目录保持零副作用。
   copyActiveChange(worktreePath);
+  writeProgressWarning(worktreePath);
   console.log(`ensure-branch: created git worktree at ${worktreePath} on branch '${name}' with active change artifacts. Make all implementation edits there.`);
   process.exit(0);
 }
