@@ -6,6 +6,11 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const CLI = join(process.cwd(), 'scripts/spec-superflow.mjs');
+// 子进程统一无色环境：本进程经 stdio:inherit 接到真 TTY 或环境含 FORCE_COLOR 时，
+// console.log(数字) 会输出 ANSI 颜色码（如 '\x1B[33m3\x1B[39m'），破坏精确串断言；
+// NO_COLOR=1、FORCE_COLOR=0 强制无色（Node 下 FORCE_COLOR=0 为关键禁用项），
+// 使输出在 TTY 与管道下一致。
+const CHILD_ENV = { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' };
 let tempDir;
 
 before(() => {
@@ -26,6 +31,7 @@ function runSsf(args) {
       exitCode: 0,
       stdout: execFileSync(process.execPath, [CLI, ...args], {
         cwd: tempDir, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'],
+        env: CHILD_ENV,
       }), stderr: '',
     };
   } catch (error) {
@@ -105,7 +111,7 @@ describe('ssf config --set 原型污染防护', () => {
   function runConfig(cwd, args) {
     try {
       const stdout = execFileSync(process.execPath, [CLI, 'config', ...args],
-        { cwd, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+        { cwd, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], env: CHILD_ENV });
       return { exitCode: 0, stdout, stderr: '' };
     } catch (error) {
       return {
