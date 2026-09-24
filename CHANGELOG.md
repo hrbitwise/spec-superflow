@@ -14,8 +14,14 @@ The format loosely follows Keep a Changelog.
 
 - **`ssf doctor` 默认路径检查失败时退出码 0 → 1**：与 `doctor skills`、`doctor vault` 子命令语义对齐，doctor 可用于 CI 门禁；检查全部通过仍退出 0。CI 中此前「检查实际失败但绿灯」的场景将变红。
 - **占位符检测大小写不敏感**：`src/validation/validator.ts` 的 Correctness 检测从裸子串 `includes` 改为词边界正则 `/\b(TODO|FIXME|HACK|XXX|PLACEHOLDER)\b/i`。小写独立标记（如 `hack this later`、`// todo: fix`）新增 FAIL；`HACKERONE`、`HACKATHON`、`XXXX` 等包含标记子串的正常单词不再误报；`TODOX`、`MYTODO` 不命中。注意：`_TODO_`、`TODO_VALUE`、`TODO123` 因下划线/数字属单词字符不再 FAIL——这些形态为代码标识符而非占位符；标记后紧邻中日韩文字（`TODO中文待补`）仍命中。
+- **Completeness 空集不再真空 PASS**：`validateImplementation` 在 spec 中提取到 0 条需求时，Completeness 从 PASS 变为 WARN（finding 说明未找到可校验需求头），验证总体 verdict 从 PASS 变为 **CONDITIONAL**；自动化流程不得再把空集当通过。含需求的正常路径判定不变。
+- **需求头行首锚定**：需求名提取与 delta 解析统一后，散文行内嵌的 `### Requirement:` 子串不再被提取为需求（此前会误判）。
 
 ### Fixed
+
+- **proposal 解析器代码围栏幻影 delta**：`src/parsing/change-parser.ts` 的章节提取与 delta 扫描改为复用 `scanMarkdownLines`，围栏内的 `## Why`、`## ADDED Requirements` 等示例文本不再污染章节内容或产生幻影 delta；真实章节与 delta 的解析结果与修复前一致。
+- **中文与 REQ-ID 需求头漏识别**：`src/validation/validator.ts` 的需求名提取统一走 `REQUIREMENT_HEADER_REGEX`——`### 需求：x` 正确提取 "x"，`### REQ-AUTH-001: 令牌校验` 提取完整头文本（与 delta 解析口径一致）；代码围栏内的需求示例不再误判。
+- **删除 9 个零引用校验消息常量**：`src/validation/constants.ts` 移除从未被引用的 SCENARIO_EMPTY、REQUIREMENT_NO_SHALL、DELTA_SPEC_EMPTY、DELTA_DESCRIPTION_EMPTY（VALIDATION_MESSAGES）与 COMPLETENESS_MISSING_TASK、CORRECTNESS_TEST_FAILURE、CORRECTNESS_MISSING_SCENARIO、COHERENCE_NAMING_MISMATCH、CONFLICT_DETECTED（VERIFICATION_MESSAGES），消除"规则已执行"的错误信号。注意这些常量经包入口对外再导出，外部代码引用将编译报错/得到 undefined，须改用保留条目。
 
 - **Windows 远程安装必失败：4 处硬编码 `/tmp`**：`scripts/lib/install.mjs`、`scripts/install-cursor.mjs`、`scripts/install-zcode.mjs`、`scripts/lib/cmd-install-workbuddy.mjs` 的临时 clone 目录统一改用 `os.tmpdir()`（此前 Windows 解析为当前盘 `\tmp`，目录默认不存在即 ENOENT）；共享安装器覆盖的 9 个平台及 Cursor/ZCode/WorkBuddy 远程安装恢复正常。存量 Windows 用户须重跑对应安装命令才会更新已落盘的 hooks 配置。
 - **Cursor/ZCode 的 SessionStart hook 路径 Windows 归一化**：hook 命令统一为 `bash "<正斜杠绝对路径>"`（复用 CodeBuddy 安装器已验证写法），反斜杠路径在 Git Bash 下不再失效，含空格路径不被截断。
