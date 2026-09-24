@@ -477,8 +477,9 @@ describe('state-loader: 原子写入（atomic-state）', () => {
   });
 
   it('正常写入文本与修复前逐字节一致（字段/顺序/单个结尾换行）', async () => {
-    // 取修复前（HEAD）的 state-loader 源码作为对照实现
-    const oldSource = execSync('git show HEAD:scripts/lib/state-loader.mjs', { encoding: 'utf8' });
+    // 取修复前 main（bdd80c9，359a9b4 修复之前）的 state-loader 源码作为对照实现；
+    // 不能用 HEAD：修复后版本依赖 plan-shared.mjs，拷到临时目录 import 会 ERR_MODULE_NOT_FOUND
+    const oldSource = execSync('git show bdd80c9:scripts/lib/state-loader.mjs', { encoding: 'utf8' });
     const oldModuleFile = join(tempDir, 'old-state-loader.mjs');
     writeFileSync(oldModuleFile, oldSource);
     const oldLoader = await import(pathToFileURL(oldModuleFile).href);
