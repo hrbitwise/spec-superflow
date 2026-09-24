@@ -10,7 +10,7 @@
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 import { basename, isAbsolute, relative, resolve, sep } from 'node:path';
-import { realpathSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 
 const GIT_OPTS = { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] };
 
@@ -56,6 +56,9 @@ export function isSubpath(parent, child) {
 
 // 解析 `git worktree list --porcelain`：返回 [{ path, branch }]。
 // 每个条目以空行分隔；branch 行仅在非 detached 状态出现。
+// 注意：缺 path 的畸形条目也原样保留（path=null）并置于结果对应位置，
+// 由调用方对首条目做 fail-closed 校验——不得在此静默丢弃，否则畸形首条目
+// 会被后续条目"顶替"，导致主工作区误判。
 function parseWorktreeList(output) {
   const entries = [];
   for (const block of output.split(/\n[ \t]*\n/)) {
@@ -66,7 +69,7 @@ function parseWorktreeList(output) {
       if (line.startsWith('worktree ')) entry.path = resolve(line.slice('worktree '.length));
       else if (line.startsWith('branch ')) entry.branch = line.slice('branch '.length);
     }
-    if (entry.path) entries.push(entry);
+    entries.push(entry);
   }
   return entries;
 }
@@ -86,17 +89,38 @@ export function run(args, io = { stdout: process.stdout, stderr: process.stderr 
   // 隔离分支名 = change 目录名（ensure-branch 以 change-name 命名分支）。
   const name = basename(resolve(changeDir));
 
-  // 主仓库根：change-dir 必须在仓库内。
-  let mainRoot;
+  // 主工作区与隔离 worktree 一次性解析：以 changeDir 为 cwd 执行
+  // `git worktree list --porcelain`——Git 输出契约保证主工作区恒为首条目。
+  // 不得使用 rev-parse --show-toplevel：从 linked worktree 运行时它指向
+  // worktree 自身，merge 会在隔离分支上 no-op（"Already up to date"）。
+  let list;
   try {
-    mainRoot = resolve(git(changeDir, ['rev-parse', '--show-toplevel'], io, runGit));
+    list = parseWorktreeList(git(changeDir, ['worktree', 'list', '--porcelain'], io, runGit));
   } catch (e) {
     io.stderr.write(`finish: ${changeDir} 不在任何 git 仓库内：${e.message}\n`);
     return { exitCode: 1 };
   }
 
-  // 1. 定位隔离 worktree（按隔离分支名匹配）。
-  const list = parseWorktreeList(git(mainRoot, ['worktree', 'list', '--porcelain'], io, runGit));
+  // fail-closed：首条目无法给出真实存在的主工作区路径时，绝不猜测、
+  // 绝不继续 merge/验证/清理。
+  const mainEntry = list[0];
+  if (!mainEntry || !mainEntry.path) {
+    io.stderr.write(
+      'finish: 无法确定主工作区——git worktree list 输出为空或首条目缺少 path 字段，' +
+      '停止收尾（未执行 merge）。\n'
+    );
+    return { exitCode: 1 };
+  }
+  if (!existsSync(mainEntry.path)) {
+    io.stderr.write(
+      `finish: 无法确定主工作区——首条目路径在文件系统不存在：${mainEntry.path}，` +
+      '停止收尾（未执行 merge）。\n'
+    );
+    return { exitCode: 1 };
+  }
+  const mainRoot = resolve(mainEntry.path);
+
+  // 1. 定位隔离 worktree（按隔离分支名从同一解析结果匹配）。
   const entry = list.find(item => item.branch === `refs/heads/${name}`);
   if (!entry) {
     io.stderr.write(
