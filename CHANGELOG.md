@@ -6,6 +6,8 @@ The format loosely follows Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-25
+
 ### Added
 
 - **design 模板新增「边界与分层判定（Boundary Check）」必填节**：`templates/design.md` 在「目标与非目标」与「决策」之间插入固定节，把分层归属判定前移到设计阶段——归属层（平台内核层 / 行业包层 / 客户定制层，单仓库项目可映射为通用模块层 / 业务模块层 / 配置层）、三问判定理由（全产品通用？→内核层；同行业共享？→行业包层；单客户特化？→定制层）、仓库与模块落点、扩展方式优先级自查（配置 > 低代码/配置化 > SPI 扩展点 > 新增模块 > 改内核/通用层，并说明上一级为何解决不了）、5 条通用禁止项自查（直依赖通用层 Impl、为单客户/单行业改内核、跨模块直注他模块 Mapper、绕过公开接口直写共享表、在通用层放行业语义实体），以及项目边界契约引用（内核层变更附下游影响面）。模板保持产品无关，不内置任何特定产品的包名或接口；具体契约由项目侧规则文件绑定。命中禁止项为 specifying 回退而非 DP-2 修补；Quick、direct Hotfix、tweak 等无 design 工件的轻量路径免填。`skills/spec-writer/SKILL.md` 的 design.md 生成要求与 Validation Checklist 同步更新；设计依据见 `docs/designs/2026-09-23-design-template-boundary-check.md`。
