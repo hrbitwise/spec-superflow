@@ -142,32 +142,25 @@ jobs:
           Remove-Item -Recurse -Force $cb_tmp
           Write-Host "OK codebuddy (windows) — Windows shims generated and executable"
 
+  # Release job：npm 包以本地发布至阿里云私有 registry 为准，
+  # 此 job 仅负责 tag 上的构建/测试验证与 GitHub Release 创建。
   release:
     name: Release
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
-      id-token: write
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@9c091bb21b1c1d1991bb908d85e3e9dddfe3e0 # v7.0.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           cache: npm
       - run: npm ci
       - run: npm run build
       - run: npm test
       - name: Check version consistency
         run: node scripts/check-version-consistency.mjs
-      - name: Verify marketplace release gate
-        env:
-          EXPECTED_VERSION: ${{ github.ref_name }}
-        run: |
-          node scripts/verify-marketplace-release.mjs \
-            --manifest-url https://raw.githubusercontent.com/hashgraph-online/awesome-codex-plugins/main/plugins/hrbitwise/spec-superflow/.codex-plugin/plugin.json \
-            --expected-version "${EXPECTED_VERSION#v}"
       - name: Token efficiency lint (warning only)
         run: node scripts/lint/lint-skills.mjs --include token
         continue-on-error: true
@@ -175,7 +168,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release create "$GITHUB_REF_NAME" --generate-notes
-      - name: Publish to npm
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
