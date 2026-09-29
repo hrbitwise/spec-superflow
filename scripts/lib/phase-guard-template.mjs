@@ -44,8 +44,8 @@ function renderBody(platformId, conditionalPreamble) {
 ${preamble}
 ## 入口规则
 
-- 所有工作必须从 "/workflow-start" 入口开始。
-- 在 .spec-superflow.yaml 中确认当前 state 和 workflow 模式之前，不要开始写代码。
+- 收到请求后先分析意图与影响面：纯问答、只读分析与信息检索可直接处理，不强制进入 "/workflow-start"；可能涉及写代码、修 bug、新建或继续 change 时，必须先给出是否需要走 "/workflow-start" 的建议与理由，由用户抉择后再路由。
+- 在 .spec-superflow.yaml 中确认当前 state 和 workflow 模式、或用户明确选择直接处理之前，不要开始写代码；Full/legacy Hotfix 的契约与执行计划门禁不因此放松。
 
 ## 全局禁止
 

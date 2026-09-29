@@ -34,8 +34,8 @@ const CONDITIONAL_BLOCKQUOTE = '> 仅在检测到 spec-superflow 变更工件（
 // F=cmd-install-workbuddy.mjs。Quick 行取 A 的 long 版（只增不减）。
 const PROHIBITION_UNION = [
   // 入口规则（2 条；A-F 全有）
-  '- 所有工作必须从 "/workflow-start" 入口开始。',
-  '- 在 .spec-superflow.yaml 中确认当前 state 和 workflow 模式之前，不要开始写代码。',
+  '- 收到请求后先分析意图与影响面：纯问答、只读分析与信息检索可直接处理，不强制进入 "/workflow-start"；可能涉及写代码、修 bug、新建或继续 change 时，必须先给出是否需要走 "/workflow-start" 的建议与理由，由用户抉择后再路由。',
+  '- 在 .spec-superflow.yaml 中确认当前 state 和 workflow 模式、或用户明确选择直接处理之前，不要开始写代码；Full/legacy Hotfix 的契约与执行计划门禁不因此放松。',
   // 全局禁止（6 条；contract/plan/receipt 三道 gate、Quick long、回退、执行类 skill）
   '- Full 或 legacy Hotfix 没有 execution-contract.md 或未经用户明确批准，不得进入实现。',
   '- Full 或 legacy Hotfix 必须先运行 ssf execution plan <change-dir> ...；没有 current execution plan 不得开始实现。',
