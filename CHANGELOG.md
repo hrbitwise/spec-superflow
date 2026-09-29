@@ -6,9 +6,12 @@ The format loosely follows Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-09-30
+
 ### Changed
 
 - **phase-guard 入口规则从硬强制改为「先分析、给建议、用户抉择」**：`scripts/lib/phase-guard-template.mjs` 的入口规则不再要求所有工作无条件从 `/workflow-start` 开始——纯问答、只读分析与信息检索可直接处理；可能涉及写代码、修 bug、新建或继续 change 时，AI 必须先给出是否需要走 workflow-start 的建议与理由，由用户抉择后再路由。实现侧硬门禁保留：未确认 state/workflow 或未经用户明确选择直接处理前不得写代码，Full/legacy Hotfix 的契约与执行计划门禁不因此放松。13 个平台共享同一模板，文案一处修改全平台生效；`tests/lib/phase-guard-template.test.mjs` 禁令并集夹具同步更新（仍为 15 条）。
+- **release job 改为 Release-only，npm 发布改走阿里云私有云本地发布**：`.github/workflows/ci.yml` 的 tag 触发 release job 移除 `npm publish --provenance --access public` 步骤与 `id-token: write` 权限、npmjs registry 配置、NPM_TOKEN 依赖以及 marketplace release gate 远程校验；npm 包以本地发布至阿里云私有 registry 为准，release job 仅负责 tag 上的构建/测试验证与 GitHub Release 创建（`gh release create --generate-notes`）。
 
 ## [1.4.0] - 2026-09-25
 

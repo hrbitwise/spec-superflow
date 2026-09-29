@@ -4,22 +4,21 @@ import { readFileSync } from 'node:fs';
 
 const workflow = readFileSync('.github/workflows/ci.yml', 'utf8').replace(/\r\n/g, '\n');
 
-describe('marketplace release gate', () => {
-  it('blocks tagged releases until the marketplace manifest matches the tag version', () => {
+// 原 marketplace release gate 已随「npm 发布改走阿里云私有云本地发布」移除，
+// release job 收敛为 Release-only：tag 上验证构建/测试并创建 GitHub Release。
+describe('release-only job contract', () => {
+  it('tag 触发的 release job 仅做验证与 GitHub Release，不在 CI 发布 npm', () => {
     const releaseJob = workflow.indexOf('\n  release:\n');
-    const gate = workflow.indexOf('name: Verify marketplace release gate');
     const githubRelease = workflow.indexOf('name: Create GitHub Release');
-    const npmPublish = workflow.indexOf('name: Publish to npm');
 
     assert.ok(releaseJob >= 0, 'workflow must define a release job');
-    assert.ok(gate >= 0, 'release workflow must verify marketplace delivery');
-    assert.ok(gate > releaseJob, 'marketplace verification must remain in the release job');
-    assert.doesNotMatch(workflow.slice(0, releaseJob), /name: Verify marketplace release gate/);
     assert.match(workflow.slice(releaseJob), /if: startsWith\(github\.ref, 'refs\/tags\/v'\)/);
-    assert.ok(gate < githubRelease, 'marketplace verification must run before GitHub Release creation');
-    assert.ok(gate < npmPublish, 'marketplace verification must run before npm publish');
-    assert.match(workflow, /EXPECTED_VERSION: \$\{\{ github\.ref_name \}\}/);
-    assert.match(workflow, /verify-marketplace-release\.mjs[\s\S]*--expected-version "\$\{EXPECTED_VERSION#v\}"/);
-    assert.match(workflow, /hashgraph-online\/awesome-codex-plugins\/main\/plugins\/hrbitwise\/spec-superflow\/\.codex-plugin\/plugin\.json/);
+    assert.ok(githubRelease > releaseJob, 'release job must create a GitHub Release');
+
+    // CI 不再承担 npm 发布与 marketplace 远程校验
+    assert.equal(workflow.indexOf('name: Verify marketplace release gate'), -1);
+    assert.equal(workflow.indexOf('name: Publish to npm'), -1);
+    assert.doesNotMatch(workflow, /npm publish/);
+    assert.doesNotMatch(workflow, /id-token: write/);
   });
 });
