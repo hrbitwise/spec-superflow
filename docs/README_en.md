@@ -151,7 +151,7 @@ npm install -g spec-superflow
 
 ### Version
 
-- Current: `v1.4.1`
+- Current: `v1.5.0`
 - v1.0: Quick, direct Hotfix, Tweak, and Full paths keep small changes bounded while reserving planning, contracts, and reviews for complex work.
 - Self-contained — no OpenSpec or Superpowers runtime required
 - Upstream: [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec), [obra/superpowers](https://github.com/obra/superpowers)

@@ -6,13 +6,15 @@ The format loosely follows Keep a Changelog.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-01
+
 ### Added
+
+- **Scenario ID 需求追溯体系**：为验收场景建立"规格 → 任务 → 测试"的声明式证据链。spec 场景头支持可选 ID（`#### Scenario: S-<CAP>-<NNN>: 标题`，change 内唯一），tasks.md 任务行支持 `covers: S-...-NNN, ...` 覆盖声明；`Validator.validateScenarioCoverage` 输出结构化覆盖矩阵（covered / missing / declaredButUnknown / idIssues），带 ID 场景须全部被任务声明覆盖，缺口为 CRITICAL 级并阻止 closing。`ssf validate` 对含 ID 的 change 输出矩阵报告（如 `scenario coverage: 8/8 covered`），缺口为 ERROR、未知声明为 WARNING、ID 格式/重复问题含行号定位；`spec-publication` 在 delta 合并前拦截 malformed/duplicate 场景 ID，坏 ID 不得进入主规格基线。向后兼容零整改：无 ID 场景保持合法、存量 change 与 `docs/examples/refactor-auth-boundary` 行为不变（矩阵不启用），`add-dark-mode` 补充带 ID 示例（S-UI-001~004）作为正向样例。模板（spec.md / tasks.md）与四个 skill（spec-writer 生成时同步 ID 与 covers；build-executor wave review 核对 covers 与测试证据；code-reviewer 新增 Scenario Coverage Check；release-archivist 最终检查增加矩阵闭合硬条件）同步更新。新增 `extractScenarios` / `validateScenarioIds` / `extractTaskCovers` 导出，`ValidationReport` 等既有结构只增不改。
 
 - **proposal 模板新增 Rejected Alternatives 可选节 + need-explorer 产出指令**：`templates/proposal.md` 在 Scope 后新增"已排除的替代方案（Rejected Alternatives）"可选节，每项两行——方案一句话 + 排除理由，条目数上限 5 条（超出视为需求漂移信号，应触发 DP-1 重审）；`skills/need-explorer/SKILL.md` 在方案对比步骤末尾增加产出要求，强制未选中 approach 与澄清排除方向登记进该节。纯文档 tweak，无代码/接口变更，复用既有 artifacts_hash、staleness 检测与分发链路。
 
 - **validator 对 Rejected Alternatives 的机器校验**：`Validator.validateChangeContent`（proposal 验证入口）新增可选节校验——用 `extractSection('Rejected')` 匹配中英文双语节标题（`## 已排除的替代方案（Rejected Alternatives）`），解析格式为 `- **名称**：<描述>——排除理由：<理由>` 的 bullet。每项描述或理由为空报 ERROR；条目数 > 5 报 WARNING（需求漂移信号，触发 DP-1 重审）；节缺失时零 issue（向后兼容）。内部辅助函数 `validateRejectedAlternativesSection` 位于 validator.ts 内（不导出），仅向 validateChangeContent 追加逻辑，零新接口、零 breaking change。
-
-- **Scenario ID 需求追溯体系**：为验收场景建立"规格 → 任务 → 测试"的声明式证据链。spec 场景头支持可选 ID（`#### Scenario: S-<CAP>-<NNN>: 标题`，change 内唯一），tasks.md 任务行支持 `covers: S-...-NNN, ...` 覆盖声明；`Validator.validateScenarioCoverage` 输出结构化覆盖矩阵（covered / missing / declaredButUnknown / idIssues），带 ID 场景须全部被任务声明覆盖，缺口为 CRITICAL 级并阻止 closing。`ssf validate` 对含 ID 的 change 输出矩阵报告（如 `scenario coverage: 8/8 covered`），缺口为 ERROR、未知声明为 WARNING、ID 格式/重复问题含行号定位；`spec-publication` 在 delta 合并前拦截 malformed/duplicate 场景 ID，坏 ID 不得进入主规格基线。向后兼容零整改：无 ID 场景保持合法、存量 change 与 `docs/examples/refactor-auth-boundary` 行为不变（矩阵不启用），`add-dark-mode` 补充带 ID 示例（S-UI-001~004）作为正向样例。模板（spec.md / tasks.md）与四个 skill（spec-writer 生成时同步 ID 与 covers；build-executor wave review 核对 covers 与测试证据；code-reviewer 新增 Scenario Coverage Check；release-archivist 最终检查增加矩阵闭合硬条件）同步更新。新增 `extractScenarios` / `validateScenarioIds` / `extractTaskCovers` 导出，`ValidationReport` 等既有结构只增不改。
 
 ### Fixed
 
