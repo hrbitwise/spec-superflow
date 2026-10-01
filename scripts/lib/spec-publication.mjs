@@ -6,6 +6,8 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import {
   extractRequirementsSection,
   parseDeltaSpec,
+  extractScenarios,
+  validateScenarioIds,
   Validator,
 } from '../../dist/index.js';
 import { findCanonicalSpecFiles, relativeSpecPath, validateSpecPathLayout } from './spec-paths.mjs';
@@ -133,6 +135,14 @@ function validateDeltaOrThrow(deltaContent) {
   const report = new Validator().validateDeltaSpec(deltaContent);
   if (!report.valid) {
     throw new Error(`Invalid delta spec: ${report.issues.map(issue => issue.message).join('; ')}`);
+  }
+  // 场景 ID 问题（malformed/duplicate）在合并前拦截，坏 ID 不得进入主规格基线
+  const idIssues = validateScenarioIds(extractScenarios(deltaContent));
+  if (idIssues.length > 0) {
+    const detail = idIssues
+      .map(issue => `${issue.kind}: ${issue.id} (${issue.locations.map(l => `line ${l.lineNumber}`).join(', ')})`)
+      .join('; ');
+    throw new Error(`Invalid scenario ids in delta spec: ${detail}`);
   }
 }
 
