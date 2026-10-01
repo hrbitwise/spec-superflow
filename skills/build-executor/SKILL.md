@@ -10,6 +10,8 @@ assets:
   - references/writing-good-tests.md
   - references/batch-inline-execution.md
   - references/inline-checkpoint.md
+  - references/isolate-preflight.md
+  - references/repair-protocol.md
 ---
 
 # Build Executor
@@ -25,10 +27,9 @@ Check workflow mode and receipt first. Tweak → direct edit mode. Quick or a va
 Branch/worktree preflight before ANY implementation edit — **workflow-aware**:
 
 **Full / legacy Hotfix — isolation mandatory (do not skip):**
-1. Run `ssf isolate <change-dir>`. On `main`/`master` it creates a git worktree (preferred) or a new branch, and exits non-zero unless it can isolate or you approve `--force`.
-2. Non-zero exit: STOP — never edit `main`/`master` in place. Ask for explicit approval and re-run `ssf isolate <change-dir> --force` only after approval. A non-zero exit also covers failed submodule initialization after the context was created — never implement on a half-initialized worktree.
-3. Success: report the chosen branch/worktree and make all edits there. When a `.gitmodules` exists, submodules are recursively initialized, and a cwd-persistence warning (isolation path + mandatory `cd` prefix) is appended to `<change-dir>/.superpowers/sdd/progress.md` so later calls do not silently edit the trunk.
-4. Closure (including `ssf finish <change-dir>` for Full/legacy Hotfix) is owned by release-archivist — route there after review passes.
+1. Run `ssf isolate <change-dir>`; a non-zero exit is a STOP — never edit `main`/`master` in place, never implement on a half-initialized worktree; ask for explicit approval and re-run with `--force` only after approval.
+2. Success: report the chosen branch/worktree and make all edits there. For worktree/branch selection, submodule initialization, and the cwd-persistence warning, read `skills/build-executor/references/isolate-preflight.md`.
+3. Closure (including `ssf finish <change-dir>` for Full/legacy Hotfix) is owned by release-archivist — route there after review passes.
 
 **Quick / direct Hotfix / Tweak / lightweight — skip isolation, edit directly on the current branch.** Rationale: no recordReview (R4 never fires), no `ssf finish` merge, no wave receipts — a worktree would be dead weight. For sensitive scenarios requiring manual isolation, run `ssf isolate <change-dir> --force` explicitly.
 
@@ -131,11 +132,7 @@ For Full/legacy Hotfix by default. Dispatch according to the persisted plan, rev
 
 ### Repair and focused re-review protocol
 
-Dispatch no repair before reading `ssf execution show <change-dir> --json`: use the CLI-provided `waves[].repair` state together with `eligible` and `retryable`. Never infer a repair round from filenames or history, and do not write, edit, or modify a repair-state file directly.
-
-- **Rounds 1–2 — recovery:** dispatch only the focused repair for the current wave. Give the implementer the CLI repair round, previous review report, and prior review head; generate a scoped diff from that head, then dispatch the `skills/build-executor/references/re-review-prompt.md` reviewer against the prior finding and that scoped diff. Do not redispatch dependent waves.
-- **Third unresolved failure — stop:** the third unresolved receipt yields CLI status `adjudication-required`. Stop automatic dispatch and request human adjudication rather than attempting a fourth repair. After human review, record it with `ssf execution adjudicate <change-dir> --wave <id> --decision allow-review --confirm --reason <text>`; it authorizes one continuous review only, never a pass, and a failed authorized review returns to `adjudication-required`.
-- Every focused re-review writes its separate persisted report, recorded only through `ssf execution review <change-dir> --wave <id> --base <sha> --head <sha> --report .superpowers/sdd/reviews/<wave-id>-rereview.md --verdict <pass|fail>`. A replacement `pass` receipt is the only evidence that resolves the wave.
+Dispatch no repair before reading `ssf execution show <change-dir> --json`: use the CLI-provided `waves[].repair` state together with `eligible` and `retryable`; never infer a repair round from filenames or history, and do not write, edit, or modify a repair-state file directly. Rounds 1–2 are recovery — dispatch only the focused repair for the current wave plus a scoped re-review; never redispatch dependent waves. The third unresolved failure yields CLI status `adjudication-required`: stop automatic dispatch and request human adjudication. For the per-round dispatch inputs, the re-review reviewer, and the replacement receipt command, read `skills/build-executor/references/repair-protocol.md`.
 
 ### Per-Task Loop
 1. **Dispatch implementer**: Load the template with `ssf runtime asset read skills/build-executor/references/implementer-prompt.md`. Extract task brief with `scripts/task-brief PLAN_FILE N`. Assemble the Context Pack exactly as the template defines it (verbatim binding contract/spec lines, design decisions with Sources, pattern pointers; no chat history or file dumps; repair report labeled evidence-to-verify), with the brief path, prior-task interfaces, and report file path.

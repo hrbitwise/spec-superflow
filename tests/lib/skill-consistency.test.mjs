@@ -97,7 +97,7 @@ describe('skill-consistency: 真实仓库 dogfood', () => {
     const result = checkSkillConsistency(process.cwd());
     assert.deepEqual(result.issues, [], result.message);
     assert.equal(result.pass, true);
-    assert.ok(result.message.includes('18 skill files'));
+    assert.ok(result.message.includes('21 skill files'));
   });
 
   it('阈值契约全部满足（裁决次数/DP-5/状态名/执行模式）', () => {

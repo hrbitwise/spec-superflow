@@ -6,6 +6,10 @@ The format loosely follows Keep a Changelog.
 
 ## [Unreleased]
 
+### Changed
+
+- **两个中枢 skill 按需加载拆分（token 优化）**：`workflow-start` 与 `build-executor` 的 SKILL.md 此前分别以 19566 / 19955 字符逼近 20000 字符预算红线（后者仅剩 45 字符余量，任何新增规则都会撞墙），现将低频触发的大块流程细节下沉为按需加载资产，硬门禁与路由判定保留在正文恒可见：workflow-start 的 Direct Short-Path Intake 同轮接收流程（含 Bearing-Fact Assumption Display）下沉为 `skills/workflow-start/references/direct-intake.md`；build-executor 的隔离预检行为细节（worktree/分支选择、submodule 递归初始化、cwd 持久化警告）下沉为 `references/isolate-preflight.md`，修复与聚焦复审协议细节（Rounds 1–2 dispatch 输入、裁决命令、替换 receipt 命令）下沉为 `references/repair-protocol.md`。正文均保留触发条件、STOP 门禁（非零退出即停、第三次未解决失败熔断 `adjudication-required`、never auto-escalate）与资产路由，门禁强度零弱化；迁移内容逐字保留语义。两个高频 skill 正文合计压缩约 3.3K 字符（workflow-start 19566→17268，build-executor 19955→18942，字符预算余量从 434/45 扩大至 2732/1058），每次触发会话的固定上下文成本相应下降，且新增规则不再即时撞墙。frontmatter assets 登记、`tests/lib/workflow-start-recommendation.test.mjs`（命令与 Bearing-Fact 断言迁移至资产文件并新增正文入口路由断言）与 `tests/lib/token-baseline.test.mjs`（skill 组件计数 18→21、资产计数 9→12）同步更新。
+
 ## [1.4.1] - 2026-09-30
 
 ### Changed

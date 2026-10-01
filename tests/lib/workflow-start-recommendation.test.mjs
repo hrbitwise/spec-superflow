@@ -41,10 +41,13 @@ function protocolErrors(source) {
 describe('workflow-start path recommendation protocol', () => {
   it('recommends and directly accepts a clearly bounded quick or incident hotfix in one turn', () => {
     const skill = read('skills/workflow-start/SKILL.md');
+    const intakeDoc = read('skills/workflow-start/references/direct-intake.md');
     assert.match(skill, /Quick.*Hotfix.*same turn|同轮.*Quick.*Hotfix/is);
-    assert.match(skill, /workflow accept <change-dir> --source direct-request --verification/);
     assert.match(skill, /do not collect.*eight|不收集.*八项/is);
     assert.match(skill, /≤3.*tasks.*files|3.*tasks.*files/is);
+    // 正文保留同轮接收的入口路由；完整命令序列在按需加载资产中
+    assert.match(skill, /references\/direct-intake\.md/);
+    assert.match(intakeDoc, /workflow accept <change-dir> --source direct-request --verification/);
   });
   it('validates and initializes a brand-new change before workflow show', () => {
     const skill = read('skills/workflow-start/SKILL.md');
@@ -109,7 +112,10 @@ describe('workflow-start path recommendation protocol', () => {
 
   it('keeps bearing-fact assumption scrutiny inside the same-turn intake', () => {
     const skill = read('skills/workflow-start/SKILL.md');
-    const intake = skill.match(/## Direct Short-Path Intake[\s\S]*?(?=## DP-0)/)?.[0] ?? '';
+    // 正文保留同轮接收的入口路由，完整流程按需加载在资产中
+    assert.match(skill, /## Direct Short-Path Intake/);
+    assert.match(skill, /references\/direct-intake\.md/);
+    const intake = read('skills/workflow-start/references/direct-intake.md');
 
     assert.match(intake, /### Bearing-Fact Assumption Display/);
     // 三个承重型事实必须被点名，且推断不得静默认证
