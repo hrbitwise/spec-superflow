@@ -43,6 +43,10 @@ Compare all approaches on the **same dimensions** in one frame — scope touched
 
 Never present a single path — always name at least one alternative.
 
+#### 产出要求
+
+方案对比中未选中的 approach、或澄清结论排除的候选方向，必须登记进 proposal 的"已排除的替代方案（Rejected Alternatives）"节——每项两行：方案一句话 + 排除理由（引用澄清结论或约束）。条目数上限 5 条，超出视为需求漂移信号，应触发 DP-1 重审而非继续登记。该节在模板中为可选，仅当存在实际排除项时才出现。
+
 ### 5. Validate Before Concluding
 
 Restate what you heard: "Here's what I'm hearing: [problem, scope, non-goals, success criteria]. Does this match?" Incorporate corrections and re-validate.
