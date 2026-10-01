@@ -129,6 +129,7 @@ For Full/legacy Hotfix by default. Dispatch according to the persisted plan, rev
    `ssf execution plan` creates this review overlay. Store report evidence in it; paths outside the overlay are rejected for audit safety.
    Do not begin a dependent wave until its predecessor receipt is `pass`.
 5. Critical/Important findings require a `fail` receipt, a focused repair, re-review, then a replacement `pass` receipt. Never advance or close with a missing or failed receipt.
+6. When specs carry `S-`-ID scenarios, the wave review must check task `covers:` declarations against actual test evidence; a declared-but-untested or missing coverage is an Important finding.
 
 ### Repair and focused re-review protocol
 
