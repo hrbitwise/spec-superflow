@@ -312,3 +312,82 @@ export function parseDeltaSpec(content: string): DeltaPlan {
     },
   };
 }
+
+// --- Scenario ID traceability (S-TRACE-001~003) ---
+
+/** 场景块：headerLine 原文、可选 ID、去 ID 前缀后的标题与行号 */
+export interface ScenarioBlock {
+  headerLine: string;
+  id?: string;
+  title: string;
+  lineNumber: number;
+}
+
+/** 场景 ID 问题：格式非法（malformed-id）或 change 内重复（duplicate-id） */
+export interface ScenarioIdIssue {
+  kind: 'duplicate-id' | 'malformed-id';
+  id: string;
+  locations: Array<{ lineNumber: number; headerLine: string }>;
+}
+
+const SCENARIO_HEADER_REGEX = /^####\s+Scenario:\s*(.+?)\s*$/i;
+// 疑似 ID 前缀（宽松）：S-/s- 开头、后接冒号——中文标题含冒号不受影响
+const SUSPECTED_SCENARIO_ID_REGEX = /^([Ss]-[^\s:]+)\s*:\s*(.+)$/;
+// 严格 ID 格式：S-<CAP>-<NNN>（大写字母/数字/连字符能力段 + 三位序号）
+const STRICT_SCENARIO_ID_REGEX = /^S-[A-Z][A-Z0-9-]*-\d{3}$/;
+
+/**
+ * 提取 markdown 中全部场景块（S-TRACE-001/002）。
+ * 围栏代码块内的示例场景头不参与提取；无 ID 场景保持合法（id 为 undefined）。
+ */
+export function extractScenarios(content: string): ScenarioBlock[] {
+  const blocks: ScenarioBlock[] = [];
+  for (const { text, lineNumber, fenced } of scanMarkdownLines(content)) {
+    if (fenced) continue;
+    const m = text.match(SCENARIO_HEADER_REGEX);
+    if (!m) continue;
+    const rest = m[1];
+    const suspected = rest.match(SUSPECTED_SCENARIO_ID_REGEX);
+    if (suspected) {
+      // 疑似 ID：原样保留（含非法格式），由 validateScenarioIds 分级报错
+      blocks.push({
+        headerLine: text,
+        id: suspected[1],
+        title: suspected[2].trim(),
+        lineNumber,
+      });
+    } else {
+      blocks.push({ headerLine: text, title: rest, lineNumber });
+    }
+  }
+  return blocks;
+}
+
+/**
+ * 校验场景 ID（S-TRACE-003）：严格格式 + change 内唯一。
+ * 非法格式报 malformed-id；重复 ID 报 duplicate-id 并给出全部出现位置。
+ */
+export function validateScenarioIds(blocks: ScenarioBlock[]): ScenarioIdIssue[] {
+  const issues: ScenarioIdIssue[] = [];
+  const byId = new Map<string, Array<{ lineNumber: number; headerLine: string }>>();
+  for (const block of blocks) {
+    if (block.id === undefined) continue;
+    if (!STRICT_SCENARIO_ID_REGEX.test(block.id)) {
+      issues.push({
+        kind: 'malformed-id',
+        id: block.id,
+        locations: [{ lineNumber: block.lineNumber, headerLine: block.headerLine }],
+      });
+      continue;
+    }
+    const list = byId.get(block.id);
+    if (list) list.push({ lineNumber: block.lineNumber, headerLine: block.headerLine });
+    else byId.set(block.id, [{ lineNumber: block.lineNumber, headerLine: block.headerLine }]);
+  }
+  for (const [id, locations] of byId) {
+    if (locations.length > 1) {
+      issues.push({ kind: 'duplicate-id', id, locations });
+    }
+  }
+  return issues;
+}

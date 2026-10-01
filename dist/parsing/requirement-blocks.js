@@ -245,3 +245,68 @@ export function parseDeltaSpec(content) {
         },
     };
 }
+const SCENARIO_HEADER_REGEX = /^####\s+Scenario:\s*(.+?)\s*$/i;
+// 疑似 ID 前缀（宽松）：S-/s- 开头、后接冒号——中文标题含冒号不受影响
+const SUSPECTED_SCENARIO_ID_REGEX = /^([Ss]-[^\s:]+)\s*:\s*(.+)$/;
+// 严格 ID 格式：S-<CAP>-<NNN>（大写字母/数字/连字符能力段 + 三位序号）
+const STRICT_SCENARIO_ID_REGEX = /^S-[A-Z][A-Z0-9-]*-\d{3}$/;
+/**
+ * 提取 markdown 中全部场景块（S-TRACE-001/002）。
+ * 围栏代码块内的示例场景头不参与提取；无 ID 场景保持合法（id 为 undefined）。
+ */
+export function extractScenarios(content) {
+    const blocks = [];
+    for (const { text, lineNumber, fenced } of scanMarkdownLines(content)) {
+        if (fenced)
+            continue;
+        const m = text.match(SCENARIO_HEADER_REGEX);
+        if (!m)
+            continue;
+        const rest = m[1];
+        const suspected = rest.match(SUSPECTED_SCENARIO_ID_REGEX);
+        if (suspected) {
+            // 疑似 ID：原样保留（含非法格式），由 validateScenarioIds 分级报错
+            blocks.push({
+                headerLine: text,
+                id: suspected[1],
+                title: suspected[2].trim(),
+                lineNumber,
+            });
+        }
+        else {
+            blocks.push({ headerLine: text, title: rest, lineNumber });
+        }
+    }
+    return blocks;
+}
+/**
+ * 校验场景 ID（S-TRACE-003）：严格格式 + change 内唯一。
+ * 非法格式报 malformed-id；重复 ID 报 duplicate-id 并给出全部出现位置。
+ */
+export function validateScenarioIds(blocks) {
+    const issues = [];
+    const byId = new Map();
+    for (const block of blocks) {
+        if (block.id === undefined)
+            continue;
+        if (!STRICT_SCENARIO_ID_REGEX.test(block.id)) {
+            issues.push({
+                kind: 'malformed-id',
+                id: block.id,
+                locations: [{ lineNumber: block.lineNumber, headerLine: block.headerLine }],
+            });
+            continue;
+        }
+        const list = byId.get(block.id);
+        if (list)
+            list.push({ lineNumber: block.lineNumber, headerLine: block.headerLine });
+        else
+            byId.set(block.id, [{ lineNumber: block.lineNumber, headerLine: block.headerLine }]);
+    }
+    for (const [id, locations] of byId) {
+        if (locations.length > 1) {
+            issues.push({ kind: 'duplicate-id', id, locations });
+        }
+    }
+    return issues;
+}
