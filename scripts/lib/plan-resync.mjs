@@ -4,9 +4,10 @@
 // plan 身份目录，全程 undo log 保护，失败时逆序恢复。依赖全部其他 plan 子模块。
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { computeArtifactsHash } from './hash.mjs';
+import { computeArtifactsHash, computeContractHash } from './hash.mjs';
 import { hashReceipt } from './execution-recommendation.mjs';
 import { getOverlayPaths, getPlanScopedPaths } from './sdd-overlay.mjs';
+import { readState } from './state-loader.mjs';
 import { atomicWrite, isNonEmptyText, isObject } from './plan-shared.mjs';
 import { hashPlan, readPlan, writeExecutionPlanSummary } from './plan-core.mjs';
 import { readCurrentReviewEvidence } from './plan-review.mjs';
@@ -15,11 +16,19 @@ import { validateAdjudicationLedgerEvidence } from './plan-adjudication.mjs';
 
 /**
  * Resolves a stale plan (see changes/plan-resync): refreshes the plan's
- * artifacts_hash reference to the current artifacts snapshot, recomputes the
- * plan content hash, refreshes the recommendation overlay seal, migrates both
- * receipt stores' plan_hash fields plus repair-state records, and appends an
- * audit record to the progress ledger. The revision — and with it the
- * plan-scoped directory identity — deliberately stays unchanged.
+ * artifacts_hash and contract_hash references to the current snapshots,
+ * recomputes the plan content hash, refreshes the recommendation overlay seal,
+ * reconnects the state summary (e.g. after `ssf state rebuild` cleared it),
+ * migrates both receipt stores' plan_hash fields plus repair-state records,
+ * and appends an audit record to the progress ledger. The revision — and with
+ * it the plan-scoped directory identity — deliberately stays unchanged.
+ *
+ * Staleness is judged against the full validatePlan mismatch checklist, not
+ * artifacts_hash alone (fix-resync-finish-flow): a plan is resyncable when its
+ * artifacts hash or contract hash differs from the current snapshot, or when
+ * the state summary is disconnected from the plan identity. Without this,
+ * a rebuild-disconnected or contract-stale plan could neither pass validatePlan
+ * nor enter resync — a deadlock previously escapable only via revision bump.
  *
  * Migration order (review-findings-fix R1/R4): every record first, the plan
  * file last. Each step appends {path, previousContent} to an undo log, so a
@@ -33,8 +42,17 @@ export function resyncPlan(changeDir, { reason } = {}) {
   if (!plan) throw new Error(`No execution plan exists in '${changeDir}'; create one before resyncing`);
 
   const currentArtifactsHash = computeArtifactsHash(changeDir);
-  if (plan.artifacts_hash === currentArtifactsHash) {
-    throw new Error('Execution plan is not stale: no need to resync until its artifacts hash differs from the current snapshot');
+  const currentContractHash = computeContractHash(changeDir);
+  // stale 判定与 validatePlan 的失配清单对齐：artifacts/contract hash 任一失配，
+  // 或 state 摘要与 plan 身份失联（`ssf state rebuild` 清空摘要后），均为 stale。
+  const state = readState(changeDir);
+  const summaryDisconnected = state.execution_plan_hash !== plan.hash
+    || state.execution_plan_revision !== plan.revision
+    || state.execution_mode !== plan.mode;
+  if (plan.artifacts_hash === currentArtifactsHash
+    && plan.contract_hash === currentContractHash
+    && !summaryDisconnected) {
+    throw new Error('Execution plan is not stale: no need to resync until its artifacts/contract hash differs from the current snapshot or the state summary is disconnected from the plan');
   }
 
   const reviewEvidenceByWave = (plan.waves ?? []).map(wave => ({
@@ -62,24 +80,27 @@ export function resyncPlan(changeDir, { reason } = {}) {
 
   try {
     const previousArtifactsHash = plan.artifacts_hash;
+    const previousContractHash = plan.contract_hash;
     const previousPlan = structuredClone(plan);
     const previousIdentity = getPlanScopedPaths(changeDir, previousPlan);
 
-    // The frozen receipt inside the plan references the artifacts snapshot it
-    // certified; resync deliberately refreshes that reference together with
-    // the plan itself. The receipt's content hash covers every field including
-    // artifacts_hash, so the seal must be recomputed.
+    // The frozen receipt inside the plan references the artifacts/contract
+    // snapshots it certified; resync deliberately refreshes those references
+    // together with the plan itself. The receipt's content hash covers every
+    // field including both hashes, so the seal must be recomputed.
     if (isObject(plan.recommendation_receipt)) {
       plan.recommendation_receipt.artifacts_hash = currentArtifactsHash;
+      plan.recommendation_receipt.contract_hash = currentContractHash;
       plan.recommendation_receipt.hash = hashReceipt(plan.recommendation_receipt);
     }
     delete plan.hash;
     plan.artifacts_hash = currentArtifactsHash;
+    plan.contract_hash = currentContractHash;
     plan.hash = hashPlan(plan);
     // revision 不变，但身份含 hash，因此 plan-scoped 目录搬移到新 identity。
     const migratedIdentity = getPlanScopedPaths(changeDir, plan);
 
-    // 决策 4：overlay 是迁移循环的第一项——更新 artifacts_hash 并重算封印。
+    // 决策 4：overlay 是迁移循环的第一项——更新 artifacts/contract hash 并重算封印。
     const overlayPath = getOverlayPaths(changeDir).executionRecommendation;
     if (existsSync(overlayPath)) {
       let overlay;
@@ -90,6 +111,7 @@ export function resyncPlan(changeDir, { reason } = {}) {
       }
       if (isObject(overlay)) {
         overlay.artifacts_hash = currentArtifactsHash;
+        overlay.contract_hash = currentContractHash;
         overlay.hash = hashReceipt(overlay);
         writeWithUndo(overlayPath, `${JSON.stringify(overlay, null, 2)}\n`);
       }
@@ -150,6 +172,8 @@ export function resyncPlan(changeDir, { reason } = {}) {
         `- reason: ${reason}`,
         `- previous_artifacts_hash: ${previousArtifactsHash}`,
         `- artifacts_hash: ${currentArtifactsHash}`,
+        `- previous_contract_hash: ${previousContractHash}`,
+        `- contract_hash: ${currentContractHash}`,
         `- plan_hash: ${plan.hash}`,
         `- plan_revision: ${plan.revision}`,
       ]);

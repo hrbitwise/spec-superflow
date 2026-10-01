@@ -10,12 +10,12 @@ import {
   recordReview, resyncPlan, validatePlan, writePlan,
 } from '../../scripts/lib/execution-plan.mjs';
 import { createRecommendationReceipt, recommendExecutionModes, validateRecommendationReceiptStructure } from '../../scripts/lib/execution-recommendation.mjs';
-import { readState } from '../../scripts/lib/state-loader.mjs';
+import { readState, writeState } from '../../scripts/lib/state-loader.mjs';
 import { getCheckpoint, getPlanScopedPaths, listCheckpoints, saveCheckpoint } from '../../scripts/lib/sdd-overlay.mjs';
 import * as sddOverlayModule from '../../scripts/lib/sdd-overlay.mjs';
 import { createGitSeedFixture } from '../helpers/git-seed-fixture.mjs';
 import { canCreateSymlink } from '../helpers/symlink-support.mjs';
-import { computeArtifactsHash } from '../../scripts/lib/hash.mjs';
+import { computeArtifactsHash, computeContractHash } from '../../scripts/lib/hash.mjs';
 import { hashReceipt, readRecommendationReceipt, writeRecommendationReceipt } from '../../scripts/lib/execution-recommendation.mjs';
 
 let changeDir;
@@ -1069,6 +1069,76 @@ describe('execution plan resync (plan-resync R1)', () => {
     const progress = readFileSync(progressPath, 'utf8');
     assert.match(progress, /non-semantic wording fix in tasks\.md/);
     assert.ok(progress.includes(current.plan_hash), 'audit must mention the new plan hash');
+  });
+
+  it('resyncs a plan whose only staleness is a rebuild-disconnected state summary, restoring it without bumping revision', () => {
+    const plan = createPlan(changeDir, {
+      mode: 'sdd', source: 'default', rationale: 'summary disconnection recovery',
+      waves: [{ id: 'wave-1', strategy: 'serial', tasks: ['1.1'], depends_on: [] }],
+    });
+    writePlan(changeDir, plan);
+    recordReview(changeDir, 'wave-1', {
+      status: 'pass', base: gitRefs.base, head: gitRefs.head, report: writeReviewReport('resync-summary-pass.md'),
+    });
+    // 模拟 `ssf state rebuild` 在 artifacts hash 变化后清空 plan 摘要字段：
+    // plan 内容本身仍然当前（artifacts/contract hash 均未变），仅 state 摘要失联。
+    // 旧缺陷：stale 判定只看 artifacts hash → resync 拒绝 → validatePlan 的
+    // 摘要失配无法修复，形成死锁。
+    const state = readState(changeDir);
+    state.revision = null;
+    state.execution_plan_hash = null;
+    state.execution_plan_revision = null;
+    writeState(changeDir, state);
+
+    resyncPlan(changeDir, { reason: 'reconnect state summary cleared by rebuild' });
+
+    const resynced = readPlan(changeDir);
+    assert.equal(resynced.revision, plan.revision, 'revision must stay unchanged');
+    const result = validatePlan(changeDir, resynced);
+    assert.equal(result.valid, true, `validatePlan must pass after resync reconnects the summary: ${result.failures.join('\n')}`);
+    const refreshedState = readState(changeDir);
+    assert.equal(refreshedState.execution_plan_hash, resynced.hash, 'state summary hash must be reconnected');
+    assert.equal(refreshedState.execution_plan_revision, resynced.revision, 'state summary revision must be reconnected');
+    assert.equal(refreshedState.execution_mode, resynced.mode, 'state summary mode must be reconnected');
+    assert.equal(readCurrentReview(changeDir, 'wave-1')?.status, 'pass', 'existing receipts must survive the summary reconnection');
+  });
+
+  it('refreshes a stale contract hash across the plan, receipt, and overlay without bumping revision', () => {
+    const plan = createPlan(changeDir, {
+      mode: 'sdd', source: 'default', rationale: 'contract hash staleness recovery',
+      waves: [{ id: 'wave-1', strategy: 'serial', tasks: ['1.1'], depends_on: [] }],
+    });
+    writePlan(changeDir, plan);
+    recordReview(changeDir, 'wave-1', {
+      status: 'pass', base: gitRefs.base, head: gitRefs.head, report: writeReviewReport('resync-contract-pass.md'),
+    });
+    // 写入 recommendation overlay（resync 的 overlay 刷新对象）
+    writeRecommendationReceipt(changeDir, plan.recommendation_receipt);
+    // 非语义合同修订：execution-contract.md 不参与 artifacts hash，仅 contract
+    // hash 失配。旧缺陷：stale 判定只看 artifacts hash → resync 拒绝；即使放行
+    // 也不刷新 plan/receipt/overlay 的 contract_hash → validatePlan 合同失配死锁。
+    writeFileSync(
+      join(changeDir, 'execution-contract.md'),
+      '# Execution Contract\n\nCurrent contract.\n\nNon-semantic note appended during closing.\n',
+    );
+
+    resyncPlan(changeDir, { reason: 'non-semantic contract wording fix' });
+
+    const resynced = readPlan(changeDir);
+    assert.equal(resynced.revision, plan.revision, 'revision must stay unchanged');
+    assert.equal(resynced.contract_hash, computeContractHash(changeDir), 'plan contract hash must be refreshed to the current snapshot');
+    assert.equal(resynced.recommendation_receipt.contract_hash, resynced.contract_hash, 'receipt contract hash must follow the plan');
+    assert.deepEqual(
+      validateRecommendationReceiptStructure(resynced.recommendation_receipt),
+      [],
+      'the receipt content seal must stay valid after the contract refresh',
+    );
+    const result = validatePlan(changeDir, resynced);
+    assert.equal(result.valid, true, `validatePlan must pass after the contract refresh: ${result.failures.join('\n')}`);
+    const overlay = readRecommendationReceipt(changeDir);
+    assert.equal(overlay?.contract_hash, resynced.contract_hash, 'overlay contract hash must be refreshed and resealed');
+    assert.deepEqual(validateRecommendationReceiptStructure(overlay), [], 'overlay seal must stay valid after the contract refresh');
+    assert.equal(readCurrentReview(changeDir, 'wave-1')?.status, 'pass', 'existing receipts must survive the contract refresh');
   });
 
   it('keeps resolved repair and adjudication evidence current and visible after resync', () => {

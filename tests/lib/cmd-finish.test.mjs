@@ -5,7 +5,7 @@
 import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -44,10 +44,12 @@ function makeRepo(dir, { pkg = { name: 'main', version: '0.0.0', scripts: { test
   writeFileSync(join(dir, 'README.md'), 'x');
   // finish 的主干验证默认执行 `npm test`（cwd=主仓库根）。
   if (pkg) writeFileSync(join(dir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');
-  // 与真实仓库一致：changes/ 是 planning 产物，gitignore 忽略。缺少它时
-  // ensure-branch 复制的 change 目录会（a）污染 worktree 的 status 干净检查、
-  // （b）被 git add -A 提交进隔离分支后与主仓库未跟踪文件在 merge 时冲突。
-  writeFileSync(join(dir, '.gitignore'), '/changes\n');
+  // 与真实仓库一致：changes/ 是 planning 产物、specs/ 是 sync 生成物，
+  // 均被 gitignore 忽略。缺少 changes 忽略时 ensure-branch 复制的 change 目录会
+  // （a）污染 worktree 的 status 干净检查、（b）被 git add -A 提交进隔离分支后
+  // 与主仓库未跟踪文件在 merge 时冲突；缺少 specs 忽略时 worktree 内的 sync
+  // 生成物会阻断干净检查，无法模拟"生成物仅存于 worktree"的真实缺陷场景。
+  writeFileSync(join(dir, '.gitignore'), '/changes\n/specs\n');
   git(dir, 'init', '-q', '--initial-branch=main');
   git(dir, 'add', '-A');
   git(dir, 'commit', '-q', '-m', 'init');
@@ -564,4 +566,89 @@ describe('ssf finish — mainRoot 取 worktree list 主条目（worktree-mechani
       assert.equal(r.mergeRoots.length, 0, 'no merge may be executed on malformed list');
     });
   }
+});
+
+// ssf finish — worktree 内 gitignore 生成物迁移（fix-resync-finish-flow 缺陷 B）：
+// specs/ 基线是 `ssf sync` 的输出且被 .gitignore 忽略，不随 merge 提交传播；
+// 旧缺陷在清理 worktree 时不迁移 → 基线随目录删除，closing 后主仓库丢失
+// 规格基线，只能靠手工重跑 ssf sync 恢复。
+describe('ssf finish — worktree 内 gitignore 生成物 specs/ 迁移回主仓库', () => {
+  it('worktree 内存在 specs/ 基线：迁移后主仓库保有相同内容、报告标注迁移、worktree 仍被清理', () => {
+    const base = mkdtempSync(join(tmpdir(), 'ssf-finish-specs-migrate-'));
+    tempDirs.push(base);
+    const { main, changeDir, worktree } = createIsolatedWorktree(base, 'finish-specs-migrate');
+    commitFileInWorktree(worktree, 'feature.txt', 'branch work');
+    // 模拟 ssf sync 在 worktree 内产出的 gitignored 规格基线（干净检查不受影响）
+    mkdirSync(join(worktree, 'specs', 'scenario-traceability'), { recursive: true });
+    writeFileSync(join(worktree, 'specs', 'scenario-traceability', 'spec.md'), '# Scenario Traceability\n\nPublished baseline from isolated sync.\n');
+
+    const r = runFinish(changeDir, main, ['--test-cmd', 'node -e "process.exit(0)"']);
+
+    assert.equal(r.status, 0, r.all);
+    const migrated = join(main, 'specs', 'scenario-traceability', 'spec.md');
+    assert.equal(existsSync(migrated), true, 'specs baseline must survive in the main repo after worktree removal');
+    assert.equal(
+      readFileSync(migrated, 'utf8'),
+      '# Scenario Traceability\n\nPublished baseline from isolated sync.\n',
+      'migrated baseline must be byte-identical to the worktree version',
+    );
+    assert.match(r.all, /specs\/ 基线已迁回主仓库/, 'report must mention the specs migration');
+    assert.equal(existsSync(worktree), false, 'worktree must still be removed');
+    assert.equal(git(main, 'branch', '--list', 'finish-specs-migrate'), '', 'isolated branch must be deleted');
+  });
+
+  it('主仓库已有同名 capability：worktree 内的较新基线胜出（cpSync 覆盖合并）', () => {
+    const base = mkdtempSync(join(tmpdir(), 'ssf-finish-specs-overwrite-'));
+    tempDirs.push(base);
+    const { main, changeDir, worktree } = createIsolatedWorktree(base, 'finish-specs-overwrite');
+    commitFileInWorktree(worktree, 'feature.txt', 'branch work');
+    // 主仓库保有旧基线（isolate 之前 sync 的输出），worktree 内是执行后重新 sync 的新基线
+    mkdirSync(join(main, 'specs', 'cap'), { recursive: true });
+    writeFileSync(join(main, 'specs', 'cap', 'spec.md'), 'old baseline\n');
+    mkdirSync(join(worktree, 'specs', 'cap'), { recursive: true });
+    writeFileSync(join(worktree, 'specs', 'cap', 'spec.md'), 'new baseline\n');
+    // 主仓库的其他 capability 不在 worktree 中，必须原样保留
+    mkdirSync(join(main, 'specs', 'other-cap'), { recursive: true });
+    writeFileSync(join(main, 'specs', 'other-cap', 'spec.md'), 'untouched\n');
+
+    const r = runFinish(changeDir, main, ['--test-cmd', 'node -e "process.exit(0)"']);
+
+    assert.equal(r.status, 0, r.all);
+    assert.equal(readFileSync(join(main, 'specs', 'cap', 'spec.md'), 'utf8'), 'new baseline\n', 'worktree version must win for shared capabilities');
+    assert.equal(readFileSync(join(main, 'specs', 'other-cap', 'spec.md'), 'utf8'), 'untouched\n', 'main-only capabilities must be preserved');
+  });
+
+  it('worktree 内无 specs/：正常收尾且报告不出现迁移行（既有行为回归）', () => {
+    const base = mkdtempSync(join(tmpdir(), 'ssf-finish-specs-absent-'));
+    tempDirs.push(base);
+    const { main, changeDir, worktree } = createIsolatedWorktree(base, 'finish-specs-absent');
+    commitFileInWorktree(worktree, 'feature.txt', 'branch work');
+
+    const r = runFinish(changeDir, main, ['--test-cmd', 'node -e "process.exit(0)"']);
+
+    assert.equal(r.status, 0, r.all);
+    assert.doesNotMatch(r.all, /specs\/ 基线已迁回主仓库/, 'no migration line when the worktree has no specs/');
+    assert.equal(existsSync(join(main, 'specs')), false, 'main repo must not gain an empty specs directory');
+    assert.equal(existsSync(worktree), false, 'worktree must be removed');
+  });
+
+  it('迁移失败 fail-closed：主仓库 specs 路径被普通文件占用 → 非零退出、worktree 保留、原文件不动', () => {
+    const base = mkdtempSync(join(tmpdir(), 'ssf-finish-specs-blocked-'));
+    tempDirs.push(base);
+    const { main, changeDir, worktree } = createIsolatedWorktree(base, 'finish-specs-blocked');
+    commitFileInWorktree(worktree, 'feature.txt', 'branch work');
+    mkdirSync(join(worktree, 'specs', 'cap'), { recursive: true });
+    writeFileSync(join(worktree, 'specs', 'cap', 'spec.md'), 'isolated baseline\n');
+    // 阻断点：主仓库 specs 是普通文件，mkdirSync/cpSync 必然失败
+    writeFileSync(join(main, 'specs'), 'not a directory');
+
+    const r = runFinish(changeDir, main, ['--test-cmd', 'node -e "process.exit(0)"']);
+
+    assert.notEqual(r.status, 0, r.all);
+    assert.match(r.all, /specs/, 'failure message must mention the specs migration');
+    assert.equal(existsSync(worktree), true, 'worktree must survive so the baseline can be recovered manually');
+    assert.equal(readFileSync(join(main, 'specs'), 'utf8'), 'not a directory', 'the blocking file must stay intact');
+    // merge 已成功（迁移发生在验证通过之后、worktree 移除之前）
+    assert.ok(git(main, 'log', '--merges', '-1', '--format=%H'), 'merge must have happened before the failed migration');
+  });
 });

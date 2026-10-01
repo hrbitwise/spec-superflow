@@ -1,6 +1,8 @@
 // scripts/lib/cmd-finish.mjs — `ssf finish <change-dir> [--test-cmd <command>]` 一键收尾
 // 将隔离分支合并回主干（merge --no-ff）、验证主干已包含隔离分支全部提交、
 // 在主干执行验证命令（默认 npm test，--test-cmd 覆盖，10 分钟超时）、
+// 将 worktree 内 gitignore 的 specs/ 基线迁回主仓库（fix-resync-finish-flow
+// 缺陷 B：生成物不随 merge 传播，不迁移会随 worktree 删除而丢失）、
 // 清理 worktree 与隔离分支，并输出收尾报告。验证失败（含超时）停止收尾、
 // 保留 worktree 与隔离分支提示重跑。错误路径一律非零退出且不 merge、
 // 不删除、不破坏既有内容。
@@ -9,8 +11,8 @@
 // shell 字符串拼接——与 ensure-branch.mjs / install-*.mjs 同一安全形式。
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
-import { basename, isAbsolute, relative, resolve, sep } from 'node:path';
-import { existsSync, realpathSync } from 'node:fs';
+import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { cpSync, existsSync, mkdirSync, realpathSync } from 'node:fs';
 
 const GIT_OPTS = { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] };
 
@@ -72,6 +74,26 @@ function parseWorktreeList(output) {
     entries.push(entry);
   }
   return entries;
+}
+
+/**
+ * 将 worktree 内 gitignore 的本地生成物（specs/ 规格基线）迁回主仓库。
+ *
+ * specs/ 是 `ssf sync` 在隔离上下文内执行时的输出，被 .gitignore 忽略，
+ * 不随 merge 提交传播；若不迁移，`git worktree remove` 会连同目录一起删除
+ * 基线，closing 后主仓库丢失已发布的规格（fix-resync-finish-flow 缺陷 B）。
+ * 迁移语义为覆盖合并：worktree 内的较新基线胜出，主仓库独有的 capability
+ * 原样保留。失败时抛错——finish 以非零退出并保留 worktree，供人工恢复。
+ *
+ * @returns {boolean} 是否发生了迁移（worktree 内不存在 specs/ 时返回 false）
+ */
+function migrateLocalOnlyArtifacts(worktreePath, mainRoot) {
+  const source = join(worktreePath, 'specs');
+  if (!existsSync(source)) return false;
+  const target = join(mainRoot, 'specs');
+  mkdirSync(target, { recursive: true });
+  cpSync(source, target, { recursive: true, dereference: false, verbatimSymlinks: true });
+  return true;
 }
 
 export function run(args, io = { stdout: process.stdout, stderr: process.stderr }, runGit = defaultRunGit) {
@@ -211,6 +233,25 @@ export function run(args, io = { stdout: process.stdout, stderr: process.stderr 
     return { exitCode: 1 };
   }
 
+  // 5b. 迁移 gitignore 的本地生成物：specs/ 规格基线仅存在于 worktree
+  // （不随 merge 提交传播），必须在移除 worktree 前迁回主仓库，否则随目录
+  // 一并删除（fix-resync-finish-flow 缺陷 B）。迁移失败 fail-closed：非零
+  // 退出、保留 worktree 与隔离分支，供人工恢复后重跑 finish。
+  let specsMigrated = false;
+  try {
+    specsMigrated = migrateLocalOnlyArtifacts(worktreePath, mainRoot);
+  } catch (e) {
+    io.stderr.write(
+      `finish: specs/ 基线迁移回主仓库失败（${e.message}），停止收尾。\n` +
+      `- 已执行 merge --no-ff（commit ${mainHead}），主干验证已通过，但未删除 worktree 与隔离分支。\n` +
+      `- worktree 内的 specs/ 基线仍完整保留，可手工复制回主仓库后重跑 \`ssf finish\`。\n`
+    );
+    return { exitCode: 1 };
+  }
+  if (specsMigrated) {
+    io.stdout.write(`finish: specs/ 基线已迁回主仓库：${join(mainRoot, 'specs')}\n`);
+  }
+
   // 6. 清理：先移除 worktree（已校验干净），再删除隔离分支。
   // Windows 无法删除作为进程 cwd 的目录，故若 cwd 位于 worktree 内，
   // 先把进程 cwd 切回主仓库再执行移除。
@@ -265,6 +306,7 @@ export function run(args, io = { stdout: process.stdout, stderr: process.stderr 
     `- merge commit: ${mainHead}\n` +
     `- worktree 已移除: ${worktreePath}${forceRemoved ? ' (force removed)' : ''}\n` +
     `- 隔离分支已删除: ${name}\n` +
+    (specsMigrated ? `- specs/ 基线已迁回主仓库: ${join(mainRoot, 'specs')}\n` : '') +
     (mergeOut ? `- merge 输出: ${mergeOut}\n` : '')
   );
   return { exitCode: 0 };
