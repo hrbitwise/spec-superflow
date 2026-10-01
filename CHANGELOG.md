@@ -6,6 +6,10 @@ The format loosely follows Keep a Changelog.
 
 ## [Unreleased]
 
+### Added
+
+- **Scenario ID 需求追溯体系**：为验收场景建立"规格 → 任务 → 测试"的声明式证据链。spec 场景头支持可选 ID（`#### Scenario: S-<CAP>-<NNN>: 标题`，change 内唯一），tasks.md 任务行支持 `covers: S-...-NNN, ...` 覆盖声明；`Validator.validateScenarioCoverage` 输出结构化覆盖矩阵（covered / missing / declaredButUnknown / idIssues），带 ID 场景须全部被任务声明覆盖，缺口为 CRITICAL 级并阻止 closing。`ssf validate` 对含 ID 的 change 输出矩阵报告（如 `scenario coverage: 8/8 covered`），缺口为 ERROR、未知声明为 WARNING、ID 格式/重复问题含行号定位；`spec-publication` 在 delta 合并前拦截 malformed/duplicate 场景 ID，坏 ID 不得进入主规格基线。向后兼容零整改：无 ID 场景保持合法、存量 change 与 `docs/examples/refactor-auth-boundary` 行为不变（矩阵不启用），`add-dark-mode` 补充带 ID 示例（S-UI-001~004）作为正向样例。模板（spec.md / tasks.md）与四个 skill（spec-writer 生成时同步 ID 与 covers；build-executor wave review 核对 covers 与测试证据；code-reviewer 新增 Scenario Coverage Check；release-archivist 最终检查增加矩阵闭合硬条件）同步更新。新增 `extractScenarios` / `validateScenarioIds` / `extractTaskCovers` 导出，`ValidationReport` 等既有结构只增不改。
+
 ### Changed
 
 - **两个中枢 skill 按需加载拆分（token 优化）**：`workflow-start` 与 `build-executor` 的 SKILL.md 此前分别以 19566 / 19955 字符逼近 20000 字符预算红线（后者仅剩 45 字符余量，任何新增规则都会撞墙），现将低频触发的大块流程细节下沉为按需加载资产，硬门禁与路由判定保留在正文恒可见：workflow-start 的 Direct Short-Path Intake 同轮接收流程（含 Bearing-Fact Assumption Display）下沉为 `skills/workflow-start/references/direct-intake.md`；build-executor 的隔离预检行为细节（worktree/分支选择、submodule 递归初始化、cwd 持久化警告）下沉为 `references/isolate-preflight.md`，修复与聚焦复审协议细节（Rounds 1–2 dispatch 输入、裁决命令、替换 receipt 命令）下沉为 `references/repair-protocol.md`。正文均保留触发条件、STOP 门禁（非零退出即停、第三次未解决失败熔断 `adjudication-required`、never auto-escalate）与资产路由，门禁强度零弱化；迁移内容逐字保留语义。两个高频 skill 正文合计压缩约 3.3K 字符（workflow-start 19566→17268，build-executor 19955→18942，字符预算余量从 434/45 扩大至 2732/1058），每次触发会话的固定上下文成本相应下降，且新增规则不再即时撞墙。frontmatter assets 登记、`tests/lib/workflow-start-recommendation.test.mjs`（命令与 Bearing-Fact 断言迁移至资产文件并新增正文入口路由断言）与 `tests/lib/token-baseline.test.mjs`（skill 组件计数 18→21、资产计数 9→12）同步更新。
