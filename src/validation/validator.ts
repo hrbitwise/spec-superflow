@@ -67,6 +67,53 @@ function extractSection(content: string, heading: string): string | undefined {
   return lines.slice(idx + 1, endIdx).join('\n').trim();
 }
 
+/**
+ * 校验 proposal 的 Rejected Alternatives 节内容。
+ * 解析 bullet 格式：`- **名称**：<描述>——排除理由：<理由>`
+ * 返回：每项的 ERROR 问题（缺描述/缺排除理由）与条目总数。
+ * 条目数超限的 WARNING 由调用方（validateChangeContent）统一追加。
+ */
+function validateRejectedAlternativesSection(section: string): {
+  rejectedIssues: ValidationIssue[];
+  count: number;
+} {
+  const issues: ValidationIssue[] = [];
+  const REJECTED_BULLET_REGEX = /^-\s+\*\*(.+?)\*\*：(.+?)——排除理由：(.+)$/;
+  let count = 0;
+  for (const rawLine of section.split('\n')) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (!line.startsWith('-')) continue;
+    count++;
+    const match = line.match(REJECTED_BULLET_REGEX);
+    if (!match) {
+      issues.push({
+        level: 'ERROR',
+        path: 'rejectedAlternatives',
+        message: `[rejected-alt] 条目格式不合法（期望 \`- **名称**：描述——排除理由：理由\`）：${line.slice(0, 60)}`,
+      });
+      continue;
+    }
+    const description = match[2]?.trim();
+    const reason = match[3]?.trim();
+    if (!description) {
+      issues.push({
+        level: 'ERROR',
+        path: 'rejectedAlternatives',
+        message: `[rejected-alt] 条目 "**${match[1]}**" 缺失描述（——前须有描述文字）`,
+      });
+    }
+    if (!reason) {
+      issues.push({
+        level: 'ERROR',
+        path: 'rejectedAlternatives',
+        message: `[rejected-alt] 条目 "**${match[1]}**" 缺失排除理由（——排除理由：后须有理由文字）`,
+      });
+    }
+  }
+  return { rejectedIssues: issues, count };
+}
+
 function containsShallOrMust(text: string): boolean {
   return /\b(SHALL|MUST)\b/.test(text);
 }
@@ -268,6 +315,21 @@ export class Validator {
         path: 'whatChanges',
         message: VALIDATION_MESSAGES.CHANGE_WHAT_EMPTY,
       });
+    }
+
+    // Rejected Alternatives 节（可选）校验：每项须同时包含描述与排除理由，
+    // 条目数上限 5 条（超出视为需求漂移信号，报 WARNING）。
+    const rejectedSection = extractSection(content, 'Rejected');
+    if (rejectedSection !== undefined) {
+      const { rejectedIssues, count } = validateRejectedAlternativesSection(rejectedSection);
+      for (const issue of rejectedIssues) issues.push(issue);
+      if (count > 5) {
+        issues.push({
+          level: 'WARNING',
+          path: 'rejectedAlternatives',
+          message: `[rejected-alt] 条目数 ${count} 超过上限 5（需求漂移信号，应触发 DP-1 重审）`,
+        });
+      }
     }
 
     return createReport(issues, this.strictMode);
