@@ -12,6 +12,9 @@ Purpose 的历史 delta 仍然有效。同步仅在创建新的主规格时使�
 
 The system SHALL 提供清晰且可测试的所需行为。
 
+<!-- 场景头可带可选 ID（格式 S-<CAP>-<NNN>，change 内唯一）：`#### Scenario: S-<CAP>-001: 标题`。
+     带 ID 的场景会进入覆盖矩阵校验（须被任务的 covers 声明覆盖）；无 ID 场景保持合法。 -->
+
 #### Scenario: 正常路径
 
 - **WHEN** 触发动作发生

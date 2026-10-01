@@ -30,7 +30,7 @@ Run: `ssf runtime config --get artifacts.order` — generate in configured order
 Must state: observed problem, what changes, in/out scope, impact areas, and proof of completion. Prefer concrete facts over empty adjectives such as “better”, “robust”, or “efficient”.
 
 ### specs/
-Every requirement must be testable. Use SHALL or MUST. Every requirement must have at least one `#### Scenario:` with WHEN/THEN. Group under ADDED/MODIFIED/REMOVED Requirements headers.
+Every requirement must be testable. Use SHALL or MUST. Every requirement must have at least one `#### Scenario:` with WHEN/THEN. Group under ADDED/MODIFIED/REMOVED Requirements headers. When a scenario carries an optional ID (`#### Scenario: S-<CAP>-NNN: title`, unique within the change), every ID-bearing scenario must be covered by a task `covers:` declaration — the coverage matrix blocks closing on gaps.
 
 ### design.md
 Must have: relevant facts and constraints, goals and non-goals, a completed Boundary Check (layer attribution via the three questions — product-wide generic / industry-shared / customer-specific; repo and module landing; extension-means priority self-check: config > lowcode/config-driven > SPI > new module > kernel change; prohibited-item self-check; project boundary-contract reference, plus downstream impact for kernel-layer changes), decisions (Choice + Rationale + Alternatives + Consequences + Sources), and risks with verification evidence. A hit on any prohibited item is a specifying rollback, not a DP-2 repair. Do not invent stakeholders, migration steps, or open questions when they do not affect the decision.
@@ -47,7 +47,7 @@ Pressure-test every Decision before writing it; record the answers inside the ex
 “It's probably fine” is a STOP signal — the same evidence standard as bug-investigator's “It's probably X”. If a field cannot be filled without inventing facts, first seek evidence in the repository or label the inference with its named assumption. Ask the user only when the gap meets the Artifact Generation pause conditions above; remain in specifying — do not route back to need-explorer or reopen DP-1.
 
 ### tasks.md
-Must include a delivery/proof map and dependency-aware tasks. Each task names the affected path or bounded area, the observable outcome, and the evidence command. Keep RED/GREEN details, review receipts, and dispatch mechanics in the execution contract/task brief; do not inflate reader-facing tasks into five ritual substeps.
+Must include a delivery/proof map and dependency-aware tasks. Each task names the affected path or bounded area, the observable outcome, and the evidence command. When specs use scenario IDs, each task appends `covers: S-...-NNN, ...` so the coverage matrix closes. Keep RED/GREEN details, review receipts, and dispatch mechanics in the execution contract/task brief; do not inflate reader-facing tasks into five ritual substeps.
 
 ## Artifact Generation
 

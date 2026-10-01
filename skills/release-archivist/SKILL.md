@@ -72,6 +72,7 @@ Verify the contract `## Quality Gates` security baseline was actually run for th
 | Correctness | PASS/FAIL/WARN | [list] |
 | Coherence | PASS/FAIL/WARN | [list] |
 | Security baseline | PASS/FAIL/WARN | [list] |
+| Scenario coverage | PASS/SKIP/FAIL | [matrix: covered/missing; SKIP when no ID-bearing scenarios] |
 
 **Verdict**: PASS (all PASS) / CONDITIONAL (WARN only) / FAIL (any FAIL).
 - FAIL → fix issues or route back to build-executor
@@ -82,6 +83,7 @@ Verify the contract `## Quality Gates` security baseline was actually run for th
 
 - Tests passing? (cite command and output)
 - All batches complete? (cite batch status)
+- Scenario coverage matrix closed? (when specs carry `S-`-ID scenarios, cite the validate output — any missing ID = FAIL, blocks closing)
 - Scope added without artifact updates?
 - Security baseline evidence recorded (Step 5)?
 - Unresolved blockers or known risks?

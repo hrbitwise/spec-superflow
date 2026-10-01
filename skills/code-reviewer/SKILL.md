@@ -38,6 +38,12 @@ relaxed or removed assertions, deleted or skipped tests, new `--no-verify` /
 configuration. Any of these without a recorded user approval in the contract is
 a Critical finding and requires a `fail` receipt.
 
+### Scenario Coverage Check
+
+When the spec carries `S-`-ID scenarios, verify each task's `covers:` declaration
+maps to real test evidence in the diff — a declared-but-untested ID, or a missing
+ID with no covering task, is Important.
+
 ### Security Baseline Check
 
 Verify the reviewed diff meets the contract's `## Quality Gates` security baseline:
