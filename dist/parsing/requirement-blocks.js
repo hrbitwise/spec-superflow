@@ -310,3 +310,35 @@ export function validateScenarioIds(blocks) {
     }
     return issues;
 }
+const TASK_HEADER_REGEX = /^-\s*\[[ xX]\]\s*\*{0,2}(\d+(?:\.\d+)*)/;
+// 捕获 covers: 之后到中文句号/行尾的整段，再按逗号切分（逗号紧邻无空格也正确）
+const COVERS_DECLARATION_REGEX = /covers:\s*([^。]+)/;
+/**
+ * 解析 tasks.md 中的 covers 声明（S-TRACE-004）。
+ * covers 归属其上方最近的任务行；无声明的任务不产生条目。
+ */
+export function extractTaskCovers(content) {
+    const entries = [];
+    let currentTaskId;
+    let currentLineNumber = 0;
+    for (const { text, lineNumber, fenced } of scanMarkdownLines(content)) {
+        if (fenced)
+            continue;
+        const taskMatch = text.match(TASK_HEADER_REGEX);
+        if (taskMatch) {
+            currentTaskId = taskMatch[1];
+            currentLineNumber = lineNumber;
+        }
+        const coversMatch = text.match(COVERS_DECLARATION_REGEX);
+        if (coversMatch && currentTaskId) {
+            const covers = coversMatch[1]
+                .split(',')
+                .map(id => id.trim())
+                .filter(id => id.length > 0);
+            if (covers.length > 0) {
+                entries.push({ taskId: currentTaskId, covers, lineNumber: currentLineNumber });
+            }
+        }
+    }
+    return entries;
+}

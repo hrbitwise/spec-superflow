@@ -1,6 +1,6 @@
 import { MIN_PURPOSE_LENGTH, MIN_WHY_SECTION_LENGTH, MAX_WHY_SECTION_LENGTH, MAX_REQUIREMENT_TEXT_LENGTH, MAX_DELTAS_PER_CHANGE, VALIDATION_MESSAGES, VERIFICATION_MESSAGES, } from './constants.js';
 import { tokenize } from './tokenizer.js';
-import { parseDeltaSpec, normalizeRequirementName, extractRequirementsSection, scanMarkdownLines, REQUIREMENT_HEADER_REGEX, } from '../parsing/requirement-blocks.js';
+import { parseDeltaSpec, normalizeRequirementName, extractRequirementsSection, scanMarkdownLines, REQUIREMENT_HEADER_REGEX, extractScenarios, validateScenarioIds, extractTaskCovers, } from '../parsing/requirement-blocks.js';
 const SCENARIO_HEADER_REGEX = /^####\s+Scenario:/i;
 function normalizeLineEndings(content) {
     return content.replace(/\r\n?/g, '\n');
@@ -490,6 +490,56 @@ export class Validator {
             names.push(match[1].trim());
         }
         return names;
+    }
+    /**
+     * Scenario 覆盖矩阵维度（S-TRACE-005~007）。
+     * 仅当 spec 中存在带 ID 的场景时启用（applicable）；全部带 ID 场景必须被
+     * 至少一个任务的 covers 声明覆盖，缺口（missing）使 valid 为 false；
+     * 声明了 spec 中不存在的 ID（declaredButUnknown）同样使 valid 为 false；
+     * ID 格式/唯一性问题（idIssues）在解析层报 ERROR 并阻断矩阵可信度。
+     */
+    validateScenarioCoverage(specContent, tasksContent) {
+        const scenarios = extractScenarios(specContent);
+        const idIssues = validateScenarioIds(scenarios);
+        const entries = extractTaskCovers(tasksContent);
+        const declared = new Set();
+        for (const entry of entries) {
+            for (const id of entry.covers) {
+                declared.add(id);
+            }
+        }
+        const knownIds = new Set();
+        for (const scenario of scenarios) {
+            if (scenario.id !== undefined && validateScenarioIds([scenario]).length === 0) {
+                knownIds.add(scenario.id);
+            }
+        }
+        const covered = [];
+        const missing = [];
+        for (const id of knownIds) {
+            if (declared.has(id))
+                covered.push(id);
+            else
+                missing.push(id);
+        }
+        covered.sort();
+        missing.sort();
+        const declaredButUnknown = [...declared]
+            .filter(id => !knownIds.has(id))
+            .sort();
+        const applicable = knownIds.size > 0;
+        const valid = idIssues.length === 0 &&
+            missing.length === 0 &&
+            declaredButUnknown.length === 0;
+        return {
+            applicable,
+            totalScenarios: knownIds.size,
+            covered,
+            missing,
+            declaredButUnknown,
+            idIssues,
+            valid,
+        };
     }
     detectSyncConflicts(deltaSpecs) {
         const reqToChanges = new Map();

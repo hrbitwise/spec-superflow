@@ -61,4 +61,15 @@ export declare function extractScenarios(content: string): ScenarioBlock[];
  * 非法格式报 malformed-id；重复 ID 报 duplicate-id 并给出全部出现位置。
  */
 export declare function validateScenarioIds(blocks: ScenarioBlock[]): ScenarioIdIssue[];
+/** 任务行的 covers 声明：任务 ID + 其声明覆盖的场景 ID 列表 */
+export interface TaskCoversEntry {
+    taskId: string;
+    covers: string[];
+    lineNumber: number;
+}
+/**
+ * 解析 tasks.md 中的 covers 声明（S-TRACE-004）。
+ * covers 归属其上方最近的任务行；无声明的任务不产生条目。
+ */
+export declare function extractTaskCovers(content: string): TaskCoversEntry[];
 export {};
