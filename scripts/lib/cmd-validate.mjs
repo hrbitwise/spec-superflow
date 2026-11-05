@@ -126,6 +126,9 @@ export async function run(args) {
     if (!report.valid) hasErrors = true;
   }
 
+  // Scenario coverage matrix（spec 存在带 ID 场景时输出矩阵报告）
+  hasErrors = printScenarioCoverage(changeDir, specLayout.specFiles, validator, hasErrors);
+
   console.log('');
   if (hasErrors) {
     console.log('❌ Validation failed with errors.');
@@ -134,4 +137,41 @@ export async function run(args) {
     console.log('✅ All artifacts validated.');
     process.exit(0);
   }
+}
+
+/**
+ * 输出 Scenario 覆盖矩阵报告（S-TRACE-005/006）。
+ * 仅当 spec 存在带 ID 场景时启用；缺口为 ERROR，未知声明为 WARNING。
+ */
+function printScenarioCoverage(changeDir, specFiles, validator, hasErrorsRef) {
+  const tasksPath = join(changeDir, 'tasks.md');
+  if (specFiles.length === 0 || !existsSync(tasksPath)) return hasErrorsRef;
+  const tasksContent = readFileSync(tasksPath, 'utf-8');
+  let hasErrors = hasErrorsRef;
+  for (const specFile of specFiles) {
+    const specContent = readFileSync(specFile, 'utf-8');
+    const coverage = validator.validateScenarioCoverage(specContent, tasksContent);
+    if (!coverage.applicable) continue;
+    const rel = relativeSpecPath(changeDir, specFile);
+    const issues = [];
+    for (const issue of coverage.idIssues) {
+      const where = issue.locations.map(l => `line ${l.lineNumber}`).join(', ');
+      issues.push({ level: 'ERROR', path: rel, message: `[scenario-id] ${issue.kind}: ${issue.id} (${where})` });
+    }
+    for (const id of coverage.missing) {
+      issues.push({ level: 'ERROR', path: rel, message: `[scenario-coverage] missing: ${id} — no task covers declaration` });
+    }
+    for (const id of coverage.declaredButUnknown) {
+      issues.push({ level: 'WARNING', path: rel, message: `[scenario-coverage] unknown id declared in tasks: ${id}` });
+    }
+    const errors = issues.filter(i => i.level === 'ERROR').length;
+    const warnings = issues.filter(i => i.level === 'WARNING').length;
+    printReport(`${rel} (scenario coverage: ${coverage.covered.length}/${coverage.totalScenarios} covered)`, {
+      valid: errors === 0,
+      issues,
+      summary: { errors, warnings, info: 0 },
+    });
+    if (errors > 0) hasErrors = true;
+  }
+  return hasErrors;
 }
