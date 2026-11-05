@@ -1,8 +1,18 @@
 // scripts/lib/state-loader.mjs — lightweight .spec-superflow.yaml state file reader/writer
 import fs from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 const STATE_FILE = '.spec-superflow.yaml';
+
+// 原子落盘：同目录 temp + rename，崩溃或 rename 失败时目标文件保持上一完整版本；
+// rename 失败错误直接向上抛出（调用方不吞错）。与 execution-plan/sdd-overlay
+// 中的 atomicWrite 惯例一致。
+function atomicWrite(targetPath, content) {
+  const tempPath = `${targetPath}.tmp-${process.pid}-${randomUUID()}`;
+  fs.writeFileSync(tempPath, content, 'utf8');
+  fs.renameSync(tempPath, targetPath);
+}
 
 export const SETTABLE_FIELDS = [
   'workflow', 'test_result', 'batches_completed', 'spec_merged',
@@ -101,7 +111,8 @@ export function writeState(changeDir, state) {
     lines.push(`${field}: ${state[field] ?? 'null'}`);
   }
 
-  fs.writeFileSync(filePath, lines.join('\n') + '\n', 'utf-8');
+  // 原子落盘：temp + rename，崩溃或 rename 失败时目标文件保持上一完整版本
+  atomicWrite(filePath, lines.join('\n') + '\n');
 }
 
 /**
@@ -135,7 +146,7 @@ export function rebuildState(changeDir, { computeArtifactsHash, computeContractH
 }
 
 // Minimal YAML parser — top-level fields only, zero dependencies.
-// Handles strings, null, integers. No nested structures needed.
+// Handles strings, null, booleans, integers. No nested structures needed.
 function parseYaml(content) {
   const result = {};
   for (const line of content.split('\n')) {
@@ -146,6 +157,11 @@ function parseYaml(content) {
       const val = match[2].trim();
       if (val === 'null' || val === '') {
         result[match[1]] = null;
+      } else if (val === 'true' || val === 'false') {
+        // 布尔按 YAML 标量语义解析，保证 _confirmed/spec_merged 等布尔
+        // 字段以布尔形态回读（writeState 会写出 false，字符串 'false'
+        // 为 truthy，会使状态判断反转）。
+        result[match[1]] = val === 'true';
       } else if (/^\d+$/.test(val)) {
         result[match[1]] = parseInt(val, 10);
       } else {

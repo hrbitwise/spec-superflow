@@ -499,3 +499,48 @@ describe('cmd-state: error handling', () => {
     assert.equal(result.exitCode, 2);
   });
 });
+
+describe('cmd-state: DP decisions/confirmed 字段端到端持久化', () => {
+  // 97d015a 回归：writeState 写出的 dp_*_confirmed 若以字符串 'false'/'true'
+  // 回读（字符串为 truthy），confirmed 类判断会反转。此处走完整 CLI 链路
+  // （state set 写盘 → state get 重新解析）断言布尔形态。
+  it('state set 写入的 dp_ 字段经 --json 回读保持布尔形态', () => {
+    const changeDir = mkdtempSync(join(tmpdir(), 'ssf-state-dp-e2e-'));
+    try {
+      writeFileSync(join(changeDir, 'proposal.md'),
+        '## Why\nDP decisions and confirmed fields must round-trip as booleans through state set/get.\n## What Changes\n- Add feature');
+      assert.equal(ssf(`state init ${changeDir}`).exitCode, 0);
+
+      for (const dp of [1, 2, 3, 6, 7]) {
+        assert.equal(ssf(`state set ${changeDir} dp_${dp}_decisions approved`).exitCode, 0);
+        assert.equal(ssf(`state set ${changeDir} dp_${dp}_confirmed true`).exitCode, 0);
+
+        const confirmed = ssf(`state get ${changeDir} dp_${dp}_confirmed --json`);
+        assert.equal(confirmed.exitCode, 0, confirmed.stderr);
+        assert.strictEqual(JSON.parse(confirmed.stdout).value, true);
+
+        const decisions = ssf(`state get ${changeDir} dp_${dp}_decisions --json`);
+        assert.equal(decisions.exitCode, 0, decisions.stderr);
+        assert.strictEqual(JSON.parse(decisions.stdout).value, 'approved');
+      }
+    } finally {
+      rmSync(changeDir, { recursive: true, force: true });
+    }
+  });
+
+  it('confirmed=false 落盘后仍以布尔 false 回读（字符串 \'false\' 为 truthy，会反转判断）', () => {
+    const changeDir = mkdtempSync(join(tmpdir(), 'ssf-state-dp-false-'));
+    try {
+      writeFileSync(join(changeDir, 'proposal.md'),
+        '## Why\nA confirmed=false value must survive the write/read round-trip as boolean false.\n## What Changes\n- Add feature');
+      assert.equal(ssf(`state init ${changeDir}`).exitCode, 0);
+      assert.equal(ssf(`state set ${changeDir} dp_1_confirmed false`).exitCode, 0);
+
+      const read = ssf(`state get ${changeDir} dp_1_confirmed --json`);
+      assert.equal(read.exitCode, 0, read.stderr);
+      assert.strictEqual(JSON.parse(read.stdout).value, false);
+    } finally {
+      rmSync(changeDir, { recursive: true, force: true });
+    }
+  });
+});

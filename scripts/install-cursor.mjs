@@ -7,7 +7,7 @@
 // correctly. Also copies skills to .cursor/skills/ (where Cursor reads them).
 //
 // Defaults to the latest GitHub release; use --local <path> to deploy from a local repo.
-import { existsSync, mkdirSync, readdirSync, statSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, realpathSync, statSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { cp, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -121,13 +121,20 @@ async function writePhaseGuard(targetRules) {
   await writeFile(join(targetRules, 'phase-guard.mdc'), content, 'utf-8');
 }
 
+// 构造 SessionStart hook 命令：反斜杠路径全部归一为正斜杠并以双引号包裹，
+// 形状 bash "<路径>"（Windows 走 Git Bash）。导出纯函数供测试复用。
+export function buildSessionStartCommand(scriptPath) {
+  const normalized = String(scriptPath).replace(/\\/g, '/');
+  return `bash "${normalized}"`;
+}
+
 async function writeCursorHooks(hooksDir) {
   ensureDir(join(targetRoot, '.cursor'));
   const hooksJson = {
     hooks: [
       {
         event: 'sessionStart',
-        command: `bash ${join(hooksDir, 'session-start')}`,
+        command: buildSessionStartCommand(join(hooksDir, 'session-start')),
       },
     ],
   };
@@ -212,7 +219,10 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error(`❌ ${err.message}`);
-  process.exit(1);
-});
+// 仅在作为入口脚本直接运行时执行安装；被 import 时只导出纯函数（如供测试）。
+if (process.argv[1] && realpathSync(resolve(process.argv[1])) === fileURLToPath(import.meta.url)) {
+  main().catch(err => {
+    console.error(`❌ ${err.message}`);
+    process.exit(1);
+  });
+}

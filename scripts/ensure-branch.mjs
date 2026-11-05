@@ -141,20 +141,22 @@ function initSubmodules(contextDir) {
   }
 }
 
-// Append a cwd-persistence warning to the change's progress ledger. The ledger
-// (and its parent directories) is created when missing; existing content is
-// never overwritten.
-function writeProgressWarning(contextDir) {
-  const progressDir = join(changeDir, '.superpowers', 'sdd');
+// 将 cwd 持久化警告追加到“隔离上下文内 change 副本”的 progress 账本：
+// worktree 路径下 worktreeRoot 是 worktree 根（警告落 worktree 副本，源 change
+// 目录零副作用）；就地分支/worktree-at-root 回退路径 worktreeRoot = repoRoot，
+// 此时 join(repoRoot, changeRelativePath) 即源 changeDir（副本即原地）。
+// 账本及父目录缺失时创建；已有内容绝不覆盖。
+function writeProgressWarning(worktreeRoot) {
+  const progressDir = join(worktreeRoot, changeRelativePath, '.superpowers', 'sdd');
   const progressFile = join(progressDir, 'progress.md');
   mkdirSync(progressDir, { recursive: true });
   const entry = [
     '',
     '## cwd 警告（ensure-branch 自动写入）',
     '',
-    `- 隔离上下文：\`${contextDir}\``,
+    `- 隔离上下文：\`${worktreeRoot}\``,
     '- Bash cwd 不持续：每条命令都会回到会话初始目录，不会记住上一次的 cd',
-    `- 强制规则：后续实现编辑必须使用隔离上下文内的绝对路径，或每条命令以前缀 \`cd ${contextDir} &&\` 开头`,
+    `- 强制规则：后续实现编辑必须使用隔离上下文内的绝对路径，或每条命令以前缀 \`cd ${worktreeRoot} &&\` 开头`,
     '',
   ].join('\n');
   appendFileSync(progressFile, entry, 'utf-8');
@@ -218,8 +220,10 @@ if (existingContext?.kind === 'worktree'
   }
   if (existingContext.setup_status === 'initializing') {
     if (!initSubmodules(worktreePath)) process.exit(1);
-    writeProgressWarning(worktreePath);
+    // 顺序要求：先复制源 change 目录，再向 worktree 副本追加警告——
+    // 警告直写最终落点，源 change 目录保持零副作用。
     copyActiveChange(worktreePath, true);
+    writeProgressWarning(worktreePath);
     writeIsolationContext(changeDir, { ...existingContext, setup_status: 'ready' });
     console.log(`ensure-branch: resumed existing git worktree at ${worktreePath} on branch '${name}'.`);
   } else {
@@ -258,8 +262,11 @@ const context = { change_name: basename(sourceChangeDir), change_relative_path: 
   kind, finish_status: 'pending', setup_status: 'initializing', review_base: reviewBase };
 writeIsolationContext(changeDir, context);
 if (!initSubmodules(isolationRoot)) process.exit(1);
-writeProgressWarning(isolationRoot);
+// 顺序要求：worktree 路径下先把源 change 目录复制进 worktree，再向 worktree
+// 副本追加警告——警告直写最终落点，源 change 目录保持零副作用。就地分支路径
+// isolationRoot = repoRoot，join(repoRoot, changeRelativePath) 即源 changeDir。
 if (values.worktree) copyActiveChange(worktreePath);
+writeProgressWarning(isolationRoot);
 writeIsolationContext(changeDir, { ...context, setup_status: 'ready' });
 console.log(`ensure-branch: created ${values.worktree ? 'git worktree' : 'feature branch'} at ${isolationRoot} on branch '${name}'. Make implementation edits there.`);
 process.exit(0);

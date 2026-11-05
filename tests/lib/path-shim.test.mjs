@@ -502,7 +502,11 @@ describe('path-shim PATH pure functions', () => {
   describe('writeWindowsUserPath (PowerShell escaping)', () => {
     it('emits a single-quoted literal so backslashes stay single', async () => {
       let captured;
-      const executor = (script) => { captured = script; return ''; };
+      // 写后会立即读回校验：Get 调用返回写入原文，模拟注册表往返一致。
+      const executor = (script) => {
+        if (script.includes('SetEnvironmentVariable')) { captured = script; return ''; }
+        return 'C:\\Users\\test\\bin';
+      };
       await pathShim.writeWindowsUserPath('C:\\Users\\test\\bin', executor);
       assert.equal(
         captured,
@@ -512,12 +516,76 @@ describe('path-shim PATH pure functions', () => {
 
     it('escapes embedded single quotes by doubling them', async () => {
       let captured;
-      const executor = (script) => { captured = script; return ''; };
+      const executor = (script) => {
+        if (script.includes('SetEnvironmentVariable')) { captured = script; return ''; }
+        return "C:\\Users\\O'Brien\\bin";
+      };
       await pathShim.writeWindowsUserPath("C:\\Users\\O'Brien\\bin", executor);
       assert.equal(
         captured,
         "[Environment]::SetEnvironmentVariable('Path', 'C:\\Users\\O''Brien\\bin', 'User')",
       );
+    });
+
+    it('写后读回一致时正常返回（中文无损）', async () => {
+      const value = 'C:\\Windows;C:\\中文测试目录\\bin';
+      let captured = null;
+      let getCalled = false;
+      // Set 捕获脚本；Get 原样读回写入值。
+      const executor = (script) => {
+        if (script.includes('SetEnvironmentVariable')) { captured = script; return ''; }
+        if (script.includes('GetEnvironmentVariable')) { getCalled = true; return value; }
+        throw new Error(`未预期的脚本：${script}`);
+      };
+      await assert.doesNotReject(pathShim.writeWindowsUserPath(value, executor));
+      assert.ok(getCalled, '写入后必须读回校验');
+      assert.ok(captured.includes(value), '写入脚本必须包含中文原文');
+    });
+
+    it('读回与写入不一致时抛错且信息含 PATH 写后校验失败', async () => {
+      // 模拟写后注册表被外部改写：读回值与写入值不同。
+      const executor = (script) => {
+        if (script.includes('SetEnvironmentVariable')) return '';
+        return 'C:\\被外部改写的Path';
+      };
+      await assert.rejects(
+        pathShim.writeWindowsUserPath('C:\\Windows;C:\\中文目录', executor),
+        /PATH 写后校验失败/,
+      );
+    });
+
+    it('含 % 的值原样传入 SetEnvironmentVariable（REG_EXPAND_SZ 语义）', async () => {
+      const value = 'C:\\Windows;%SystemRoot%\\system32;%USERPROFILE%\\bin';
+      let captured = null;
+      let getCalled = false;
+      // 读回保留 %...% 片段，证明变量引用既不被提前展开也不被转义。
+      const executor = (script) => {
+        if (script.includes('SetEnvironmentVariable')) { captured = script; return ''; }
+        if (script.includes('GetEnvironmentVariable')) { getCalled = true; return value; }
+        return value;
+      };
+      await pathShim.writeWindowsUserPath(value, executor);
+      assert.ok(getCalled, '写入后必须读回校验');
+      assert.ok(captured.includes(value), '%...% 片段必须原样传入');
+      assert.equal(
+        captured,
+        `[Environment]::SetEnvironmentVariable('Path', '${value}', 'User')`,
+      );
+    });
+  });
+
+  describe('powershellExec (UTF-8 输出编码)', () => {
+    it('执行脚本前强制 UTF-8 输出编码前缀并保留原脚本', () => {
+      let captured = null;
+      // 注入底层子进程执行器（fake），断言实际执行脚本含 UTF8 前缀。
+      const fakeRun = (script) => { captured = script; return 'ok'; };
+      const result = pathShim.powershellExec('Write-Output hi', fakeRun);
+      assert.equal(result, 'ok', '返回值应经 trim');
+      assert.ok(
+        captured.startsWith('[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;'),
+        '脚本必须以 UTF-8 输出编码前缀开头',
+      );
+      assert.ok(captured.endsWith('Write-Output hi'), '前缀之后拼接原始脚本');
     });
   });
 

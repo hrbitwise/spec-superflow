@@ -43,7 +43,8 @@ test('accepted decision fields survive state writes', t => {
     updateField(dir, `dp_${n}_decisions`, 'confirmed scope');
     updateField(dir, `dp_${n}_confirmed`, 'true');
     assert.equal(readState(dir)[`dp_${n}_decisions`], 'confirmed scope');
-    assert.equal(readState(dir)[`dp_${n}_confirmed`], 'true');
+    // 布尔按 YAML 标量语义回读（字符串 'false' 为 truthy，会反转 confirmed 判断）
+    assert.strictEqual(readState(dir)[`dp_${n}_confirmed`], true);
   }
 });
 

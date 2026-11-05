@@ -350,3 +350,21 @@ describe('workflow path recommendation', () => {
     }
   });
 });
+
+// isLightweightPath 入口 SHALL 将反斜杠归一化为正斜杠后再判定。
+// 动态导入：函数尚未导出时仅本 describe 用例失败，既有用例不受影响。
+describe('isLightweightPath 兼容 Windows 路径分隔符', () => {
+  it('反斜杠内部相对路径识别为轻量内部路径', async () => {
+    const { isLightweightPath } = await import('../../scripts/lib/workflow-recommendation.mjs');
+    assert.equal(isLightweightPath('tests\\foo.ts'), true);
+    assert.equal(isLightweightPath('tests\\sub\\a.ts'), true);
+    assert.equal(isLightweightPath('docs\\guide\\a.md'), true);
+  });
+
+  it('反斜杠目录遍历片段与 Windows 绝对路径仍被拦截', async () => {
+    const { isLightweightPath } = await import('../../scripts/lib/workflow-recommendation.mjs');
+    assert.equal(isLightweightPath('tests\\..\\secret.txt'), false);
+    assert.equal(isLightweightPath('..\\foo.ts'), false);
+    assert.equal(isLightweightPath('D:\\foo.ts'), false);
+  });
+});
