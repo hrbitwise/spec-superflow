@@ -8,7 +8,7 @@
 
 ## 任务
 
-- [ ] **1.1 <动词开头的交付>**：修改 `path/to/file`，说明完成后什么行为不同；证明：`exact command`。
+- [ ] **1.1 <动词开头的交付>**：修改 `path/to/file`，说明完成后什么行为不同；证明：`exact command`。covers: S-<CAP>-001, ...（可选：声明本任务覆盖的 Scenario ID，带 ID 场景须全部被声明，矩阵缺口阻止 closing）
 
 ## 实施备注（仅在必要时）
 

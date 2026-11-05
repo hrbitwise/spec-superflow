@@ -48,7 +48,7 @@ For Native `final`, the current executor performs one whole-range review after i
 SSF execution review <dir> --wave final --base <base-sha> --head <head-sha> --report .superpowers/sdd/reviews/final.md --verdict <pass|fail>
 ```
 
-For `wave`, review once per planned wave, using its ID instead of `final`; dependencies require a current passing receipt. SDD may use one reviewer subagent per wave because the user authorized delegation. Do not add per-task and final duplicates. Critical/Important findings require fail → focused repair → one focused re-review → pass.
+For `wave`, review once per planned wave, using its ID instead of `final`; dependencies require a current passing receipt. SDD may use one reviewer subagent per wave because the user authorized delegation. Do not add per-task and final duplicates. Critical/Important findings require fail → focused repair → one focused re-review → pass. When specs carry `S-`-ID scenarios, the review must check task `covers:` declarations against actual test evidence; a declared-but-untested or missing coverage is an Important finding.
 
 Read the CLI repair status before a retry. Never edit repair-state files. In new plans, record a stable `--issue <finding-id>` on failed reviews and keep that ID for the same unresolved defect. Three failures for that issue require human adjudication; different findings do not share the budget. After adjudication, `SSF execution adjudicate <dir> --wave <id> --decision allow-review --confirm --reason <text>` records permission for one further review, never a pass. Preserve the prior review head so repair ranges remain continuous. For a final review, re-review the original complete range plus fixes when needed to certify the final snapshot.
 

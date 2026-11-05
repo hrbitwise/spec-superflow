@@ -24,8 +24,8 @@ Check shared interfaces against the real source once, then self-check the proble
 ## Artifact checks
 
 - proposal.md records the problem, in/out scope, acceptance, impact and risks.
-- tasks.md is the only task list: unique numbered checkboxes, dependency order, affected paths or bounded areas, observable outcomes and proof commands. Keep test-cycle details in execution notes rather than repeating the plan.
-- Add specs/ for durable behavior scenarios: each requirement uses SHALL/MUST and a `#### Scenario:` with WHEN/THEN, grouped under the applicable delta headers.
+- tasks.md is the only task list: unique numbered checkboxes, dependency order, affected paths or bounded areas, observable outcomes and proof commands. When specs use scenario IDs, each task appends `covers: S-...-NNN, ...` so the coverage matrix closes. Keep test-cycle details in execution notes rather than repeating the plan.
+- Add specs/ for durable behavior scenarios: each requirement uses SHALL/MUST and a `#### Scenario:` with WHEN/THEN, grouped under the applicable delta headers. Scenarios may carry an optional ID (`#### Scenario: S-<CAP>-NNN: title`, unique within the change); every ID-bearing scenario must be covered by a task `covers:` declaration — the coverage matrix blocks closing on gaps.
 - Add design.md for real technical decisions: choice, rationale, alternatives, consequences and risks. Reference existing architecture instead of copying it.
 
 Self-check five questions once: problem, command boundary, invalidation boundary, continuation boundary and document flow. Fix contradictions and missing acceptance evidence before presenting the one concrete plan for approval. Keep existing approval when it still covers that exact plan. After workflow-start records approval, continue to build-executor.

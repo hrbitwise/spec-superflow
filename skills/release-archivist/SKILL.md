@@ -17,7 +17,7 @@ Read `SSF resume <change-dir> --json`. In `executing`, complete verification and
 
 ## New direct/planned changes
 
-Use `SSF workflow complete <dir> --verification-command "<required check command>"`. It runs final verification once; do not run the identical full suite immediately before invoking it. Planned execution additionally checks completed tasks, current full-range/wave review and any delta-spec publication. Direct execution needs no plan or review receipt. Ordinary failures stay in executing for focused repair. Reuse authorization already covering code delivery.
+Use `SSF workflow complete <dir> --verification-command "<required check command>"`. It runs final verification once; do not run the identical full suite immediately before invoking it. Planned execution additionally checks completed tasks, current full-range/wave review and any delta-spec publication. Direct execution needs no plan or review receipt. When specs carry `S-`-ID scenarios, the scenario coverage matrix must be closed before verified completion: run `SSF validate <dir>` and cite its output — any missing ID is a FAIL that blocks closing (only `--accept-risk` with an explicit user decision can bypass it). Ordinary failures stay in executing for focused repair. Reuse authorization already covering code delivery.
 
 If the user explicitly accepts unfinished work or failed verification, use `SSF workflow complete <dir> --accept-risk --confirm --reason "<decision and remaining issues>"`. Preserve every failure and report accepted-risk, not verified success. This ends code delivery without merging or deleting the branch. A plain closing transition cannot bypass failed checks. For verified work, physical integration remains a separate authorized operation.
 

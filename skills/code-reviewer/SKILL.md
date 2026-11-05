@@ -32,6 +32,12 @@ For unrequested complexity, cite the missing task requirement and diff line.
 Use Important for merge-blocking complexity and Minor for safe,
 behavior-neutral redundancy; never score by line count.
 
+### Scenario Coverage Check
+
+When the spec carries `S-`-ID scenarios, verify each task's `covers:` declaration
+maps to real test evidence in the diff — a declared-but-untested ID, or a missing
+ID with no covering task, is Important.
+
 ## Part 2: Receiving Review Feedback
 
 ### The Response Pattern
