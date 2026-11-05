@@ -86,6 +86,16 @@ jobs:
           grep -q 'Bash(node:\*)' "$cb_tmp/commands/ssf/resume.md" || { echo "FAIL codebuddy: resume.md allowed-tools not rewritten to node"; exit 1; }
           rm -rf "$cb_tmp"
           echo "OK codebuddy — 9 skills, settings.json SessionStart, commands rewritten, phase-guard scoped"
+          # Trae deploys to a user-level dir via --trae-dir (CN layout by default).
+          trae_tmp="$(mktemp -d)"
+          node "$GITHUB_WORKSPACE/scripts/install-trae.mjs" --local "$GITHUB_WORKSPACE" --trae-dir "$trae_tmp" > /dev/null
+          [ -d "$trae_tmp/skills" ] || { echo "FAIL trae: skills dir missing"; exit 1; }
+          trae_count="$(ls "$trae_tmp/skills" | wc -l | tr -d ' ')"
+          [ "$trae_count" -ge 9 ] || { echo "FAIL trae: only $trae_count skills (expected 9)"; exit 1; }
+          [ -f "$trae_tmp/user_rules/phase-guard.md" ] || { echo "FAIL trae: phase-guard rule missing"; exit 1; }
+          [ -d "$trae_tmp/spec-superflow/scripts" ] || { echo "FAIL trae: runtime dir missing"; exit 1; }
+          rm -rf "$trae_tmp"
+          echo "OK trae — 9 skills, user_rules/phase-guard.md, runtime dir"
           echo "All 9 platform installers passed smoke test."
 
   codebuddy-install-smoke:
