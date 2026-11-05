@@ -4,11 +4,11 @@
   "description": "Lean spec workflow with direct or planned execution and evidence-based completion.",
   "version": "2.2.0",
   "author": {
-    "name": "MageByte",
-    "url": "https://github.com/MageByte-Zero"
+    "name": "hrbitwise",
+    "url": "https://github.com/hrbitwise"
   },
-  "homepage": "https://github.com/MageByte-Zero/spec-superflow",
-  "repository": "https://github.com/MageByte-Zero/spec-superflow",
+  "homepage": "https://github.com/hrbitwise/spec-superflow",
+  "repository": "https://github.com/hrbitwise/spec-superflow",
   "license": "MIT",
   "logo": "assets/icon.svg",
   "keywords": [

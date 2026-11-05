@@ -33,7 +33,7 @@ const defaultPluginRoot = resolve(__dirname, '..', '..'); // repo root when run 
 
 const DEFAULT_MARKETPLACE = 'cb_teams_marketplace';
 const PLUGIN_NAME = 'spec-superflow';
-const GITHUB_REPO = 'MageByte-Zero/spec-superflow';
+const GITHUB_REPO = 'hrbitwise/spec-superflow';
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 const RUNTIME_DIRS = ['scripts', 'docs', 'templates', 'dist', 'hooks'];
 const CANONICAL_COMMAND_NAMES = ['ssf:resume', 'ssf:save', 'ssf:switch'];
@@ -237,7 +237,7 @@ function pluginManifest(skillNames, version) {
     name: PLUGIN_NAME,
     version: version || '0.0.0',
     description: 'Spec-Superflow — OpenSpec 规划引擎 + Superpowers 执行纪律的任务工作流。',
-    author: { name: 'MageByte-Zero' },
+    author: { name: 'hrbitwise' },
     homepage: { url: `https://github.com/${GITHUB_REPO}`, type: 'github' },
     license: 'MIT',
     skills: skillNames.map(name => `./skills/${name}`),

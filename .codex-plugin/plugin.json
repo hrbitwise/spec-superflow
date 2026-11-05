@@ -3,11 +3,11 @@
   "version": "2.2.0",
   "description": "Lean spec workflow with direct or planned execution and evidence-based completion.",
   "author": {
-    "name": "MageByte",
-    "url": "https://github.com/MageByte-Zero"
+    "name": "hrbitwise",
+    "url": "https://github.com/hrbitwise"
   },
-  "homepage": "https://github.com/MageByte-Zero/spec-superflow",
-  "repository": "https://github.com/MageByte-Zero/spec-superflow",
+  "homepage": "https://github.com/hrbitwise/spec-superflow",
+  "repository": "https://github.com/hrbitwise/spec-superflow",
   "license": "MIT",
   "keywords": [
     "workflow",
@@ -27,14 +27,14 @@
     "displayName": "spec-superflow",
     "shortDescription": "Lean workflow with guarded completion.",
     "longDescription": "A self-contained Codex workflow with direct or planned execution, optional specifications, one final review by default, recoverable state, and delta spec sync.",
-    "developerName": "MageByte",
+    "developerName": "hrbitwise",
     "category": "Developer Tools",
     "composerIcon": "./assets/icon.svg",
     "capabilities": [
       "Write",
       "Review"
     ],
-    "websiteURL": "https://github.com/MageByte-Zero/spec-superflow",
+    "websiteURL": "https://github.com/hrbitwise/spec-superflow",
     "defaultPrompt": [
       "Start this change with the direct path.",
       "Create a short proposal and task list, then start planned execution.",

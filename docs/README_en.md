@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
-  <a href="https://github.com/MageByte-Zero/spec-superflow/stargazers"><img src="https://img.shields.io/github/stars/MageByte-Zero/spec-superflow" alt="GitHub Stars"></a>
+  <a href="https://github.com/hrbitwise/spec-superflow/stargazers"><img src="https://img.shields.io/github/stars/hrbitwise/spec-superflow" alt="GitHub Stars"></a>
   <a href="https://www.npmjs.com/package/spec-superflow"><img src="https://img.shields.io/npm/v/spec-superflow" alt="npm version"></a>
 </p>
 
@@ -150,14 +150,14 @@ The repository, branch, and path are recorded and checked during recovery. `ssf 
 ### Claude Code
 
 ```bash
-/plugin marketplace add MageByte-Zero/spec-superflow
+/plugin marketplace add hrbitwise/spec-superflow
 /plugin install spec-superflow@spec-superflow
 ```
 
 ### OpenAI Codex CLI / App
 
 ```bash
-codex plugin marketplace add MageByte-Zero/spec-superflow --ref v2.2.0
+codex plugin marketplace add hrbitwise/spec-superflow --ref v2.2.0
 codex plugin add spec-superflow@spec-superflow
 ```
 
@@ -180,14 +180,14 @@ Detects the CN layout (`~/.trae-cn/`) first and falls back to the international 
 ### GitHub Copilot CLI
 
 ```bash
-copilot plugin marketplace add MageByte-Zero/spec-superflow
+copilot plugin marketplace add hrbitwise/spec-superflow
 copilot plugin install spec-superflow@spec-superflow
 ```
 
 ### Gemini CLI
 
 ```bash
-gemini extensions install https://github.com/MageByte-Zero/spec-superflow
+gemini extensions install https://github.com/hrbitwise/spec-superflow
 ```
 
 ### CatPaw (妙手, import preview)

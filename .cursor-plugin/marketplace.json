@@ -1,7 +1,7 @@
 {
   "name": "spec-superflow-marketplace",
   "owner": {
-    "name": "MageByte"
+    "name": "hrbitwise"
   },
   "metadata": {
     "description": "Lean spec workflow plugin marketplace for Cursor",

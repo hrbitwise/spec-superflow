@@ -35,7 +35,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultPluginRoot = resolve(__dirname, '..', '..');
 
 const PLUGIN_NAME = 'spec-superflow';
-const GITHUB_REPO = 'MageByte-Zero/spec-superflow';
+const GITHUB_REPO = 'hrbitwise/spec-superflow';
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 const RUNTIME_DIRS = ['scripts', 'docs', 'templates', 'dist', 'hooks'];
 

@@ -10,7 +10,7 @@ export async function cloneRelease(tag, { clone = execFileSync, logger = console
   logger.log(`📥 Cloning ${tag} into ${pluginRoot} ...`);
   try {
     clone('git', ['clone', '--depth', '1', '--branch', tag,
-      'https://github.com/MageByte-Zero/spec-superflow.git', pluginRoot], { stdio: 'inherit' });
+      'https://github.com/hrbitwise/spec-superflow.git', pluginRoot], { stdio: 'inherit' });
     return { pluginRoot, stagingDir };
   } catch (error) {
     rmSync(stagingDir, { recursive: true, force: true });

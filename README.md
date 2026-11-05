@@ -4,12 +4,12 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
-  <a href="https://github.com/MageByte-Zero/spec-superflow/stargazers"><img src="https://img.shields.io/github/stars/MageByte-Zero/spec-superflow" alt="GitHub Stars"></a>
+  <a href="https://github.com/hrbitwise/spec-superflow/stargazers"><img src="https://img.shields.io/github/stars/hrbitwise/spec-superflow" alt="GitHub Stars"></a>
   <a href="https://www.npmjs.com/package/spec-superflow"><img src="https://img.shields.io/npm/v/spec-superflow" alt="npm version"></a>
 </p>
 
 <p align="center">
-  <a href="#快速开始">快速开始</a> · <a href="#两个执行路径">执行路径</a> · <a href="#9-个-skills">Skills</a> · <a href="#安装">安装</a> · <a href="#命令">命令</a> · <a href="#与同类方案对比">对比</a> · <a href="#关注码哥跳动">公众号</a> · <a href="docs/README_en.md">English</a>
+  <a href="#快速开始">快速开始</a> · <a href="#两个执行路径">执行路径</a> · <a href="#9-个-skills">Skills</a> · <a href="#安装">安装</a> · <a href="#命令">命令</a> · <a href="#与同类方案对比">对比</a> · <a href="docs/README_en.md">English</a>
 </p>
 
 ---
@@ -176,14 +176,14 @@ ssf isolate changes/example --worktree
 ### Claude Code
 
 ```bash
-/plugin marketplace add MageByte-Zero/spec-superflow
+/plugin marketplace add hrbitwise/spec-superflow
 /plugin install spec-superflow@spec-superflow
 ```
 
 ### OpenAI Codex CLI / App
 
 ```bash
-codex plugin marketplace add MageByte-Zero/spec-superflow --ref v2.2.0
+codex plugin marketplace add hrbitwise/spec-superflow --ref v2.2.0
 codex plugin add spec-superflow@spec-superflow
 ```
 
@@ -206,14 +206,14 @@ npx spec-superflow@latest install-trae
 ### GitHub Copilot CLI
 
 ```bash
-copilot plugin marketplace add MageByte-Zero/spec-superflow
+copilot plugin marketplace add hrbitwise/spec-superflow
 copilot plugin install spec-superflow@spec-superflow
 ```
 
 ### Gemini CLI
 
 ```bash
-gemini extensions install https://github.com/MageByte-Zero/spec-superflow
+gemini extensions install https://github.com/hrbitwise/spec-superflow
 ```
 
 ### CatPaw（妙手，导入包预览）
@@ -272,14 +272,6 @@ AI 编程工作流类工具按“控制哪一层风险”分层：需求理解�
 - **风险分级**：入口先评估改动影响面，新变更收敛为 Direct / Planned 两条执行路径（Full 仅用于 v1 变更恢复），越界路径必须显式确认。
 - **执行凭据化**：review receipt、`test_result: pass`、计划批准范围都是可校验证据，而不是“文档写了就算执行了”。
 - **一体化交付**：不能只采用其中一环（例如只用 Review Gate 而不进入状态记录）。
-
-## 关注「码哥跳动」
-
-<p align="center">
-  <img src="assets/magebyte-wechat.jpg" alt="码哥跳动微信公众号二维码" width="220">
-</p>
-
-<p align="center">扫码关注公众号「码哥跳动」，获取 AI 编程工作流、工程实践和 spec-superflow 项目更新。</p>
 
 ## 开发
 

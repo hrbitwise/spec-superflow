@@ -23,6 +23,7 @@ Upgrade based on upstream v2.1.0, porting the v1.5 fork's unique capabilities ba
 
 - **Phase-guard entry semantics**: the shared opt-in guard now advises — analyze the request first; read-only work may proceed directly; workflow-relevant requests come with a `workflow-start` recommendation and reasons, and the user decides. Contract, plan, and receipt gates stay intact on every path. All installers pick this up via the shared generator.
 - **Release job is Release-only**: CI no longer publishes to npm (no `NPM_TOKEN`, no `id-token: write`, no `registry-url`); npm packages are published as a manual local step to the Aliyun private registry, documented in `docs/release-checklist.md`.
+- **Repository channel switched to `hrbitwise/spec-superflow`**: all marketplace commands, installer clone URLs, badges, manifests, and version-sync patterns now point at the hrbitwise fork; plugin author fields read `hrbitwise`; the original WeChat promo section and QR asset are removed; LICENSE adds the hrbitwise copyright line while preserving the upstream MageByte notice (MIT). Historical release records (`docs/releases/v2.1.0-plan.md`) keep their upstream links on purpose.
 - **Version bumped to 2.2.0** across all manifests, installers, and docs.
 
 ### Fixed

@@ -272,7 +272,7 @@ describe('cmd-doctor: checkRootPluginAuthor()', () => {
 
   it('fails when author is a string (Copilot strict validation)', () => {
     writeFileSync(join(tempDir, 'plugin.json'), JSON.stringify({
-      author: 'MageByte',
+      author: 'hrbitwise',
     }));
 
     const result = checkRootPluginAuthor(tempDir);
@@ -282,12 +282,12 @@ describe('cmd-doctor: checkRootPluginAuthor()', () => {
 
   it('passes when author is an object with name', () => {
     writeFileSync(join(tempDir, 'plugin.json'), JSON.stringify({
-      author: { name: 'MageByte' },
+      author: { name: 'hrbitwise' },
     }));
 
     const result = checkRootPluginAuthor(tempDir);
     assert.equal(result.pass, true);
-    assert.ok(result.message.includes('MageByte'));
+    assert.ok(result.message.includes('hrbitwise'));
   });
 
   it('fails when author object missing name', () => {

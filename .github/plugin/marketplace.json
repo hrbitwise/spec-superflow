@@ -1,8 +1,8 @@
 {
   "name": "spec-superflow",
   "owner": {
-    "name": "MageByte",
-    "url": "https://github.com/MageByte-Zero"
+    "name": "hrbitwise",
+    "url": "https://github.com/hrbitwise"
   },
   "metadata": {
     "description": "Lean spec workflow plugins and skills for AI coding agents.",
@@ -15,11 +15,11 @@
       "version": "2.2.0",
       "source": ".",
       "author": {
-        "name": "MageByte",
-        "url": "https://github.com/MageByte-Zero"
+        "name": "hrbitwise",
+        "url": "https://github.com/hrbitwise"
       },
-      "homepage": "https://github.com/MageByte-Zero/spec-superflow",
-      "repository": "https://github.com/MageByte-Zero/spec-superflow",
+      "homepage": "https://github.com/hrbitwise/spec-superflow",
+      "repository": "https://github.com/hrbitwise/spec-superflow",
       "license": "MIT",
       "keywords": [
         "workflow",

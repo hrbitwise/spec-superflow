@@ -2,8 +2,8 @@
   "name": "spec-superflow",
   "description": "Lean spec workflow with direct or planned execution and evidence-based completion.",
   "owner": {
-    "name": "MageByte",
-    "url": "https://github.com/MageByte-Zero"
+    "name": "hrbitwise",
+    "url": "https://github.com/hrbitwise"
   },
   "plugins": [
     {
@@ -12,8 +12,8 @@
       "version": "2.2.0",
       "source": "./",
       "author": {
-        "name": "MageByte",
-        "url": "https://github.com/MageByte-Zero"
+        "name": "hrbitwise",
+        "url": "https://github.com/hrbitwise"
       }
     }
   ]
