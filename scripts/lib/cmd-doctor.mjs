@@ -1,9 +1,10 @@
 // ssf doctor — health check for spec-superflow installation and project
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { loadConfig } from './config-loader.mjs';
 import { PLATFORM_RUNTIME_INVENTORY } from './platform-runtime-inventory.mjs';
 import { checkSkillConsistency } from './skill-consistency.mjs';
+import { checkVaultDrift, DEFAULT_MIRROR_DIR } from './vault-drift.mjs';
 
 const RUNTIME_SKILLS = new Set([
   'workflow-start', 'need-explorer', 'spec-writer', 'contract-builder',
@@ -240,10 +241,98 @@ function runSkillsCheck(root) {
   return { exitCode: 1 };
 }
 
+/**
+ * 解析 `ssf doctor vault` 参数。
+ * 支持 --vault-root <path>、--moc <relpath>、--mirror-dir <relpath>、--strict、--json。
+ * @returns {{values:object, error:string|null}} error 非空时调用方应以退出码 2 拒绝执行
+ */
+function parseVaultArgs(args) {
+  const values = { vaultRoot: null, moc: null, mirrorDir: DEFAULT_MIRROR_DIR, strict: false, json: false };
+  const valueFlags = { '--vault-root': 'vaultRoot', '--moc': 'moc', '--mirror-dir': 'mirrorDir' };
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+    if (arg === '--strict') { values.strict = true; continue; }
+    if (arg === '--json') { values.json = true; continue; }
+    if (valueFlags[arg]) {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) return { values, error: `${arg} requires a value` };
+      values[valueFlags[arg]] = value;
+      index += 1;
+      continue;
+    }
+    return { values, error: `unknown argument: ${arg}` };
+  }
+  return { values, error: null };
+}
+
+/**
+ * 执行 `ssf doctor vault`：检查外部 Obsidian vault 的 skill 镜像漂移与 MOC 引用完整性。
+ * vault 根定位顺序：--vault-root flag → spec-superflow.config.json 的 knowledgeVault.root。
+ * 退出码：0 无阻断性漂移；1 检出漂移或检查无法执行（vault/MOC 缺失）；2 参数或配置用法错误。
+ */
+function runVaultCheck(root, args) {
+  const { values, error } = parseVaultArgs(args);
+  if (error) {
+    console.error(`spec-superflow doctor vault: ${error}`);
+    console.error('usage: ssf doctor vault --vault-root <path> [--moc <rel-path>] [--mirror-dir <rel-path>] [--strict] [--json]');
+    return { exitCode: 2 };
+  }
+
+  const config = loadConfig(root);
+  const vaultRoot = values.vaultRoot || config.knowledgeVault?.root || null;
+  if (!vaultRoot) {
+    console.error('spec-superflow doctor vault: vault root is required.');
+    console.error('Pass --vault-root <path>, or set "knowledgeVault": { "root": "<path>" } in spec-superflow.config.json.');
+    return { exitCode: 2 };
+  }
+  const moc = values.moc || config.knowledgeVault?.moc || null;
+  const result = checkVaultDrift(root, vaultRoot, {
+    moc,
+    mirrorDir: values.mirrorDir,
+    strict: values.strict,
+  });
+
+  if (values.json) {
+    console.log(JSON.stringify({ vaultRoot, ...result }, null, 2));
+    return { exitCode: result.ok && result.pass ? 0 : 1 };
+  }
+
+  console.log('spec-superflow doctor vault:\n');
+  console.log(`vault root: ${vaultRoot}`);
+  if (!result.ok) {
+    console.log(`\n✖ ${result.fatal}`);
+    return { exitCode: 1 };
+  }
+
+  const mocNames = result.mocFiles.map(file => relative(vaultRoot, file).replace(/\\/g, '/')).join(', ');
+  console.log(`MOC index(es): ${mocNames}`);
+  console.log(`skill mirror: ${DEFAULT_MIRROR_DIR}/ <- skills/\n`);
+
+  for (const issue of result.issues) {
+    const icon = issue.severity === 'error' ? '✖' : '⚠';
+    const location = issue.line > 0 ? `${issue.file}:${issue.line}` : issue.file;
+    console.log(`${icon} [${issue.kind}] ${location}\n    ${issue.detail}`);
+  }
+
+  const { errors, warnings, sourceFiles, mirroredFiles, syncedFiles, mocCount } = result.summary;
+  console.log(`\nmirror: ${syncedFiles}/${sourceFiles} source file(s) in sync across ${mirroredFiles} mirrored file(s); MOC checked: ${mocCount}; ${errors} error(s), ${warnings} warning(s)${values.strict ? ' (strict)' : ''}`);
+  if (result.pass) {
+    console.log('✅ Vault mirror and MOC references are consistent with the plugin source.');
+  } else {
+    console.log('⚠️  Vault drift detected; refresh the vault mirror or fix the reported MOC references.');
+  }
+  return { exitCode: result.pass ? 0 : 1 };
+}
+
 export async function run(args) {
   // 聚焦子命令：ssf doctor skills
   if (Array.isArray(args) && args[0] === 'skills') {
     return runSkillsCheck(process.cwd());
+  }
+
+  // 聚焦子命令：ssf doctor vault（外部 Obsidian vault 漂移检查）
+  if (Array.isArray(args) && args[0] === 'vault') {
+    return runVaultCheck(process.cwd(), args.slice(1));
   }
 
   const root = process.cwd();
@@ -294,4 +383,4 @@ export async function run(args) {
   return { exitCode: hasFailure ? 1 : 0 };
 }
 
-export { checkVersionConsistency, checkHooks, checkCodexManifest, checkSkills, checkRuntimeDistribution, checkDist, checkRootPluginAuthor, checkNodeVersion, checkDocs, checkSkillConsistency };
+export { checkVersionConsistency, checkHooks, checkCodexManifest, checkSkills, checkRuntimeDistribution, checkDist, checkRootPluginAuthor, checkNodeVersion, checkDocs, checkSkillConsistency, runVaultCheck };
