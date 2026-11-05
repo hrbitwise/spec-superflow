@@ -16,7 +16,7 @@
 
 spec-superflow combines OpenSpec-style planning with Superpowers-style verification discipline in one self-contained plugin. v2 gives new work two entry points: execute a clear, bounded change directly, or approve one short plan before implementation.
 
-Current: `v2.1.0`
+Current: `v2.2.0`
 
 The defaults minimize overhead: execute in the current session, review once at the end, verify once at completion, and keep ordinary debugging inside execution. Subagents, per-wave reviews, and worktrees are explicit choices.
 
@@ -157,7 +157,7 @@ The repository, branch, and path are recorded and checked during recovery. `ssf 
 ### OpenAI Codex CLI / App
 
 ```bash
-codex plugin marketplace add MageByte-Zero/spec-superflow --ref v2.0.1
+codex plugin marketplace add MageByte-Zero/spec-superflow --ref v2.2.0
 codex plugin add spec-superflow@spec-superflow
 ```
 
@@ -168,6 +168,14 @@ Codex does not enable SessionStart injection; invoke `workflow-start` only when 
 ```bash
 npx spec-superflow@latest install-cursor
 ```
+
+### Trae
+
+```bash
+npx spec-superflow@latest install-trae
+```
+
+Detects the CN layout (`~/.trae-cn/`) first and falls back to the international `~/.trae/`. The installer replaces only the nine spec-superflow skill directories (third-party skills are preserved) and writes the resident entry rule into `user_rules/phase-guard.md`.
 
 ### GitHub Copilot CLI
 
@@ -190,7 +198,7 @@ node scripts/spec-superflow.mjs package-catpaw ./catpaw-spec-superflow
 
 Import the generated folder from CatPaw's Skills page. It contains the matching CLI and all nine workflow skills; reimport the whole folder when upgrading. This command is planned for the next release. Package structure and local CLI behavior have been tested; CatPaw client acceptance is pending.
 
-The project also supports 19 AI coding platforms. See [INSTALL.md](../INSTALL.md) for every installer and uninstall path, and the [platform matrix](platform-matrix.md) for capability differences.
+The project supports 20 AI coding platforms in total. See [INSTALL.md](../INSTALL.md) for every installer and uninstall path, and the [platform matrix](platform-matrix.md) for capability differences.
 
 ## Commands
 

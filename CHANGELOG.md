@@ -6,6 +6,32 @@ The format loosely follows Keep a Changelog.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-11-05
+
+Upgrade based on upstream v2.1.0, porting the v1.5 fork's unique capabilities back so this line is a strict superset of upstream v2. All ports are re-adapted to the v2 model (Direct / Planned paths, opt-in guard, schema v2 execution plans).
+
+### Added
+
+- **Scenario ID traceability**: scenarios may carry IDs (`#### Scenario: S-<CAP>-NNN: title`); tasks close the loop with `covers:` declarations, `ssf validate` renders a coverage matrix, and spec publication blocks on uncovered ID-bearing scenarios. Templates and the four writing skills teach the syntax; `docs/examples/add-dark-mode` demonstrates it end to end.
+- **`ssf doctor skills`**: CLI source is the single source of truth — statically extract subcommands/flags/asset allowlists and scan every `ssf`/`SSF` invocation in `skills/**/*.md`, plus a threshold contract cross-checking engine constants (repair-failure threshold, minimum failed debug attempts, workflow states, execution modes) against the documents. Wired as a hard CI gate; the two real drifts it found on import are fixed.
+- **`ssf doctor vault`**: read-only check of an external Obsidian vault for skill-mirror drift and MOC reference integrity, with `--strict` and `--json` modes.
+- **`ssf install-trae`**: restore the Trae installer (CN `~/.trae-cn` first, international `~/.trae` fallback). Deploys the nine skills while preserving third-party skill directories, and writes the phase-guard into `user_rules/`. CI smoke covers it.
+- **README comparison section** (both languages): positions grill-me, Spec-Kit, OpenSpec, Trellis, and Superpowers by the risk layer each controls and where it lands in spec-superflow.
+- **Design template Boundary Check**: `templates/design.md` gains a required section moving layer attribution (kernel / industry package / customer customization), repo/module landing, extension-means priority, prohibited items, and boundary-contract reference into the design stage; a prohibited hit is a specifying rollback before approval. spec-writer teaches the same check.
+
+### Changed
+
+- **Phase-guard entry semantics**: the shared opt-in guard now advises — analyze the request first; read-only work may proceed directly; workflow-relevant requests come with a `workflow-start` recommendation and reasons, and the user decides. Contract, plan, and receipt gates stay intact on every path. All installers pick this up via the shared generator.
+- **Release job is Release-only**: CI no longer publishes to npm (no `NPM_TOKEN`, no `id-token: write`, no `registry-url`); npm packages are published as a manual local step to the Aliyun private registry, documented in `docs/release-checklist.md`.
+- **Version bumped to 2.2.0** across all manifests, installers, and docs.
+
+### Fixed
+
+- **Engine validation**: placeholder detection honors word boundaries; requirement-header extraction is unified across sections (an empty requirement set is a WARN, not a crash); the change parser is fence-aware so code blocks containing `## Why`-like text no longer truncate parsing; Rejected Alternatives evidence is extracted from proposals.
+- **State persistence**: booleans parse per YAML scalar semantics so `dp_*_confirmed` fields round-trip as booleans (the string `'false'` is truthy and inverted confirmation checks); `writeState` is atomic (temp file + rename).
+- **CLI robustness**: `ssf config --set` rejects prototype-pollution keys (`__proto__`/`constructor`/`prototype`) before touching disk; `ssf doctor` propagates a failure exit code through the dispatcher; installer hooks build Windows-safe session-start commands and installers only run their main when executed directly; `isLightweightPath` normalizes path separators for Windows; the user PATH write is verified after writing; `ssf ensure-branch` writes its progress warning into the worktree copy, leaving the source change directory untouched.
+- **Windows test suite**: tests that require a POSIX shell skip cleanly, and `|| true` style shell idioms are replaced with portable `spawnSync` checks.
+
 ## [2.1.0] - 2026-10-26
 
 ### Changed

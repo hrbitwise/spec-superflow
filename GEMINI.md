@@ -1,4 +1,4 @@
-# spec-superflow v2.1.0 | opt-in
+# spec-superflow v2.2.0 | opt-in
 
 Use the bundled agent skills in `skills/` to run the spec-superflow workflow.
 

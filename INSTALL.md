@@ -7,7 +7,7 @@
 - [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec) — 规划引擎（Schema 验证、Delta Spec、工件解析）
 - [obra/superpowers](https://github.com/obra/superpowers) — 执行纪律（TDD 铁律、SDD、系统化调试、代码审查）
 
-当前发布版本：**v2.1.0**。
+当前发布版本：**v2.2.0**。
 
 每个安装渠道都把 Skill 与 CLI runtime 作为同一个版本单元部署和升级；Skill 只运行该安装包内的 runtime，不依赖 `PATH` 中其他渠道留下的 `ssf`。
 
@@ -40,7 +40,7 @@
 | WorkBuddy | `ssf install-workbuddy` | 重新运行安装器 | 删除 marketplace 插件并禁用 |
 | CatPaw（妙手，预览） | `ssf package-catpaw <new-dir>` 后在客户端导入 | 重新生成并导入整个文件夹 | 在妙手技能管理中卸载 |
 | CodeBuddy Code CLI | `ssf install-codebuddy` | 重新运行安装器 | `ssf uninstall-codebuddy` |
-| Trae IDE / TRAE Work | `.trae/skills` / 上传 zip 或 .skill / marketplace | `git pull` + 重新导入 | UI 卸载或删除技能目录 |
+| Trae IDE / TRAE Work | `ssf install-trae`（`node scripts/install-trae.mjs`）/ `.trae/skills` / 上传 zip 或 .skill | 重新运行安装器 | 删除 spec-superflow 技能目录与 `user_rules/phase-guard.md` |
 | Cline | `ssf install-cline` | 重新运行脚本 | 删除 `.cline/skills/`、`.clinerules/` |
 | Kiro | `ssf install-kiro` | 重新运行脚本 | 删除 `.kiro/skills/`、`.kiro/steering/` |
 | Windsurf | `ssf install-windsurf` | 重新运行脚本 | 删除 `.windsurf/skills/`、`.windsurf/rules/` |
@@ -187,7 +187,7 @@ codex plugin add spec-superflow@awesome-codex-plugins
 当社区 marketplace 镜像尚未同步时，可直接指定本仓库的 release tag：
 
 ```bash
-codex plugin marketplace add MageByte-Zero/spec-superflow --ref v2.1.0
+codex plugin marketplace add MageByte-Zero/spec-superflow --ref v2.2.0
 codex plugin add spec-superflow@spec-superflow
 ```
 
@@ -548,7 +548,23 @@ cat ~/.codebuddy/spec-superflow/package.json | grep version   # 期望版本，�
 
 ## Trae
 
-Trae IDE / TRAE Work 原生支持 `SKILL.md`。项目技能目录是 `.trae/skills/`，全局技能目录是 `~/.trae/skills/`；TRAE Work 也支持上传包含根级 `SKILL.md` 的 zip 或 `.skill` 文件，并可从内置 skill marketplace 安装。
+Trae IDE / TRAE Work 原生支持 `SKILL.md`。项目技能目录是 `.trae/skills/`，全局技能目录是 `~/.trae/skills/`（国内版为 `~/.trae-cn/skills/`）；TRAE Work 也支持上传包含根级 `SKILL.md` 的 zip 或 `.skill` 文件，并可从内置 skill marketplace 安装。
+
+### 安装（推荐：一键脚本）
+
+```bash
+git clone https://github.com/MageByte-Zero/spec-superflow.git
+cd spec-superflow
+node scripts/install-trae.mjs
+```
+
+安装器自动探测 `~/.trae-cn/`（国内版）或 `~/.trae/`（国际版），完成以下部署：
+
+- 9 个 skill 复制到 `<trae-dir>/skills/`（只替换 spec-superflow 自身的 9 个技能目录，第三方技能完全保留）
+- 运行时依赖部署到 `<trae-dir>/spec-superflow/`
+- 常驻入口规则写入 `<trae-dir>/user_rules/phase-guard.md`
+
+可用 `--trae-dir <path>` 显式指定 Trae 根目录（常用于多配置隔离或 CI 验证）。
 
 ### 安装（本地目录）
 
@@ -569,14 +585,15 @@ cp -R spec-superflow/skills/* ~/.trae/skills/
 
 ```bash
 cd /path/to/spec-superflow && git pull
-cp -R skills/* ~/.trae/skills/
+node scripts/install-trae.mjs   # 或按上方手工方式覆盖 skills 目录
 ```
 
 ### 卸载
 
 ```bash
-rm -rf .trae/skills/
-rm -rf ~/.trae/skills/
+rm -rf ~/.trae-cn/spec-superflow ~/.trae-cn/user_rules/phase-guard.md
+# 再删除 9 个技能目录：workflow-start build-executor code-reviewer contract-builder need-explorer release-archivist spec-merger spec-writer bug-investigator
+rm -rf ~/.trae/skills/   # 仅在目录内没有第三方技能时才可整目录删除
 ```
 
 ---

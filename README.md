@@ -16,7 +16,7 @@
 
 spec-superflow 把 OpenSpec 的结构化规划与 Superpowers 的验证纪律组合成一个自包含插件。v2 将新任务收敛为两个入口：明确的小改动直接执行，需要共同确认范围的改动先形成一份短计划再执行。
 
-当前版本：`v2.1.0`
+当前版本：`v2.2.0`
 
 默认行为偏向低成本：当前会话内执行、最终审查一次、最终验证一次、普通调试留在执行阶段。子代理、逐波审查和 worktree 都需要显式选择。
 
@@ -183,7 +183,7 @@ ssf isolate changes/example --worktree
 ### OpenAI Codex CLI / App
 
 ```bash
-codex plugin marketplace add MageByte-Zero/spec-superflow --ref v2.1.0
+codex plugin marketplace add MageByte-Zero/spec-superflow --ref v2.2.0
 codex plugin add spec-superflow@spec-superflow
 ```
 
@@ -194,6 +194,14 @@ Codex 不启用 SessionStart 自动注入；请按需调用 `workflow-start`，�
 ```bash
 npx spec-superflow@latest install-cursor
 ```
+
+### Trae
+
+```bash
+npx spec-superflow@latest install-trae
+```
+
+国内版自动探测 `~/.trae-cn/`，国际版回退到 `~/.trae/`；安装器只替换 spec-superflow 自身的 9 个技能目录（第三方技能保留），并写入 `user_rules/phase-guard.md` 常驻入口规则。
 
 ### GitHub Copilot CLI
 
@@ -216,7 +224,7 @@ node scripts/spec-superflow.mjs package-catpaw ./catpaw-spec-superflow
 
 在妙手「技能」中导入生成的文件夹。包内包含同版本 CLI 和九个流程技能，升级时一起重新导入。此命令随下一版本发布；目前已验证包结构与本地 CLI，尚未完成妙手客户端验收。
 
-项目另支持 19 个 AI 编程平台。其他平台的安装器、目录和卸载方式见 [INSTALL.md](INSTALL.md)，能力差异见 [平台矩阵](docs/platform-matrix.md)。
+项目共支持 20 个 AI 编程平台。其他平台的安装器、目录和卸载方式见 [INSTALL.md](INSTALL.md)，能力差异见 [平台矩阵](docs/platform-matrix.md)。
 
 ## 命令
 
