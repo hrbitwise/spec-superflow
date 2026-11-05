@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick start</a> · <a href="#two-execution-paths">Execution paths</a> · <a href="#installation">Installation</a> · <a href="#commands">Commands</a> · <a href="../README.md">中文</a>
+  <a href="#quick-start">Quick start</a> · <a href="#two-execution-paths">Execution paths</a> · <a href="#installation">Installation</a> · <a href="#commands">Commands</a> · <a href="#comparison-with-similar-approaches">Compare</a> · <a href="../README.md">中文</a>
 </p>
 
 ---
@@ -219,6 +219,25 @@ Run `ssf --help` for the full command list. `workflow recommend/select/accept`, 
 - **Context on demand:** ordinary sessions should not receive the full workflow through global rules or SessionStart hooks.
 
 The project draws from [OpenSpec](https://github.com/Fission-AI/OpenSpec) for specification structure and [Superpowers](https://github.com/obra/superpowers) for TDD, debugging, and review discipline. Neither is a runtime dependency.
+
+## Comparison with Similar Approaches
+
+Workflow tools differ by which layer of risk they control: requirement understanding, spec drift, context hand-off, or delivery quality. spec-superflow merges the two most relevant capabilities — OpenSpec-style change management plus Superpowers-style execution discipline — into one pipeline, and internalizes requirement elicitation and context hand-off as inner loops.
+
+| Approach | Risk it controls | Where it lands here | Difference |
+|---|---|---|---|
+| [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me) | Requirements too coarse; boundaries and acceptance unstated | `need-explorer`: one question at a time + 2-3 approach comparison, confirmed by the user | An inner loop of the workflow, not a pluggable skill |
+| [Spec-Kit](https://github.com/github/spec-kit) | Specify first, then generate plan and tasks | `spec-writer` + the schema engine (SHALL/MUST/Scenario validation) | Artifacts are machine-verifiable, not just phase documents |
+| [OpenSpec](https://github.com/Fission-AI/OpenSpec) | Continuous change and archiving on existing projects | `changes/<name>/` artifacts + `spec-merger` + closing archive | Absorbed at source level; active changes only read the change dir |
+| [Trellis](https://github.com/mindfold-ai/Trellis) | Context lost across sessions; tasks cannot hand off | `.spec-superflow.yaml` state + `ssf checkpoint` / `ssf handoff` | Content-level state files and verifiable receipts instead of a project-memory directory |
+| [Superpowers](https://github.com/obra/superpowers) | Implementation quality and delivery process | `build-executor` TDD iron law + SDD + review gates + review receipts | Absorbed at source level; "done" means a persisted receipt |
+
+Four differences from "install several skills and combine them":
+
+- **Single entry**: `workflow-start` is the only entry; illegal state transitions are caught by the guard instead of competing workflows.
+- **Risk-graded routing**: the entry first assesses blast radius; new changes converge to the Direct / Planned paths (Full remains for v1 change recovery), and stepping outside a path requires explicit confirmation.
+- **Execution as evidence**: review receipts, `test_result: pass`, and approved plan scope are verifiable evidence, not "the doc says it was done".
+- **Delivered as a whole**: you cannot adopt just one link (e.g. review gates without recorded state).
 
 ## Development
 

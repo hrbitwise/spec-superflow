@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="#快速开始">快速开始</a> · <a href="#两个执行路径">执行路径</a> · <a href="#9-个-skills">Skills</a> · <a href="#安装">安装</a> · <a href="#命令">命令</a> · <a href="#关注码哥跳动">公众号</a> · <a href="docs/README_en.md">English</a>
+  <a href="#快速开始">快速开始</a> · <a href="#两个执行路径">执行路径</a> · <a href="#9-个-skills">Skills</a> · <a href="#安装">安装</a> · <a href="#命令">命令</a> · <a href="#与同类方案对比">对比</a> · <a href="#关注码哥跳动">公众号</a> · <a href="docs/README_en.md">English</a>
 </p>
 
 ---
@@ -245,6 +245,25 @@ node scripts/spec-superflow.mjs package-catpaw ./catpaw-spec-superflow
 - **按需加载**：普通会话不应被 SessionStart 或全局规则强制注入完整工作流。
 
 项目借鉴 [OpenSpec](https://github.com/Fission-AI/OpenSpec) 的规格组织与 [Superpowers](https://github.com/obra/superpowers) 的 TDD、调试和审查纪律，但运行时不依赖二者。
+
+## 与同类方案对比
+
+AI 编程工作流类工具按“控制哪一层风险”分层：需求理解、规范漂移、上下文接力、交付质量。spec-superflow 把其中最相关的两条能力（OpenSpec 式变更管理 + Superpowers 式执行纪律）收敛成一条流水线，并把需求追问与上下文接力内化为内环。
+
+| 同类方案 | 它控制的风险 | 在本项目中的对应 | 差异 |
+|---|---|---|---|
+| [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me) | 需求太粗，边界与验收没说清 | `need-explorer` 一次一问 + 2-3 方案对比，由用户确认 | 内化为工作流内环，不是可插拔技能 |
+| [Spec-Kit](https://github.com/github/spec-kit) | 先定规范，再生成计划与任务 | `spec-writer` + Schema 引擎（SHALL/MUST/Scenario 强制校验） | 工件是机器可校验的，不只是阶段文档 |
+| [OpenSpec](https://github.com/Fission-AI/OpenSpec) | 存量项目的持续变更与归档 | `changes/<name>/` 工件 + `spec-merger` + closing 归档 | 源码级吸收；活动变更只读 change 目录 |
+| [Trellis](https://github.com/mindfold-ai/Trellis) | 跨会话丢失上下文，任务无法接力 | `.spec-superflow.yaml` 状态 + `ssf checkpoint` / `ssf handoff` | 用内容级状态文件与可校验凭据替代项目记忆目录 |
+| [Superpowers](https://github.com/obra/superpowers) | 实现质量与交付过程 | `build-executor` TDD 铁律 + SDD + Review Gate + 审查收据 | 源码级吸收，并把“完成”变成必须落盘的 receipt |
+
+和“装多个 Skill 再组合”的差别在四点：
+
+- **单入口**：只有 `workflow-start` 一个入口，非法状态转移会被 guard 拦下，不存在多个流程争抢主导权。
+- **风险分级**：入口先评估改动影响面，新变更收敛为 Direct / Planned 两条执行路径（Full 仅用于 v1 变更恢复），越界路径必须显式确认。
+- **执行凭据化**：review receipt、`test_result: pass`、计划批准范围都是可校验证据，而不是“文档写了就算执行了”。
+- **一体化交付**：不能只采用其中一环（例如只用 Review Gate 而不进入状态记录）。
 
 ## 关注「码哥跳动」
 
