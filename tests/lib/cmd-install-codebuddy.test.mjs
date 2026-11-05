@@ -3,7 +3,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
@@ -281,10 +281,15 @@ describe('cmd-install-codebuddy', () => {
   });
 });
 
+// hooks/session-start 是 bash 脚本；本地 Windows 环境若无 bash 则跳过，
+// CI windows-latest runner 自带 Git Bash 不受影响。
+const hasBash = !spawnSync('bash', ['--version'], { stdio: 'ignore' }).error;
+const skipNoBash = hasBash ? false : 'bash not available on this machine';
+
 describe('hooks/session-start output format', () => {
   const scriptPath = join(process.cwd(), 'hooks', 'session-start');
 
-  it('outputs nothing when no active state file exists', t => {
+  it('outputs nothing when no active state file exists', { skip: skipNoBash }, t => {
     const project = mkdtempSync(join(tmpdir(), 'ssf-hook-inactive-'));
     t.after(() => rmSync(project, { recursive: true, force: true }));
     const out = execFileSync('bash', [scriptPath], {
@@ -294,7 +299,7 @@ describe('hooks/session-start output format', () => {
     assert.equal(out, '');
   });
 
-  it('outputs hookSpecificOutput for active CodeBuddy state', t => {
+  it('outputs hookSpecificOutput for active CodeBuddy state', { skip: skipNoBash }, t => {
     const project = mkdtempSync(join(tmpdir(), 'ssf-hook-codebuddy-'));
     t.after(() => rmSync(project, { recursive: true, force: true }));
     writeFileSync(join(project, '.spec-superflow.yaml'), 'state: executing\n');
@@ -307,7 +312,7 @@ describe('hooks/session-start output format', () => {
     assert.match(out, /"additionalContext"/);
   });
 
-  it('falls back to top-level additionalContext for active generic state', t => {
+  it('falls back to top-level additionalContext for active generic state', { skip: skipNoBash }, t => {
     const project = mkdtempSync(join(tmpdir(), 'ssf-hook-generic-'));
     t.after(() => rmSync(project, { recursive: true, force: true }));
     writeFileSync(join(project, '.spec-superflow.yaml'), 'state: executing\n');

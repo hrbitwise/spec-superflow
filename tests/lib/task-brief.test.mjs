@@ -1,6 +1,6 @@
 import { afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -9,6 +9,11 @@ const ROOT = process.cwd();
 const TASK_BRIEF = join(ROOT, 'scripts', 'task-brief');
 const tempDirs = [];
 
+// scripts/task-brief 是 bash 脚本；本地 Windows 环境若无 bash 则跳过，
+// CI windows-latest runner 自带 Git Bash 不受影响。
+const hasBash = !spawnSync('bash', ['--version'], { stdio: 'ignore' }).error;
+const skipNoBash = hasBash ? false : 'bash not available on this machine';
+
 afterEach(() => {
   while (tempDirs.length > 0) {
     rmSync(tempDirs.pop(), { recursive: true, force: true });
@@ -16,7 +21,7 @@ afterEach(() => {
 });
 
 describe('task-brief', () => {
-  it('continues to extract a legacy Task heading', () => {
+  it('continues to extract a legacy Task heading', { skip: skipNoBash }, () => {
     const directory = mkdtempSync(join(tmpdir(), 'ssf-task-brief-'));
     tempDirs.push(directory);
     const tasksPath = join(directory, 'tasks.md');
@@ -39,7 +44,7 @@ describe('task-brief', () => {
     assert.doesNotMatch(brief, /Another task/);
   });
 
-  it('extracts one checkbox task from the current tasks template', () => {
+  it('extracts one checkbox task from the current tasks template', { skip: skipNoBash }, () => {
     const directory = mkdtempSync(join(tmpdir(), 'ssf-task-brief-'));
     tempDirs.push(directory);
     const tasksPath = join(directory, 'tasks.md');
