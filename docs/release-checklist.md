@@ -141,6 +141,7 @@ Validate examples according to their recorded workflow variant. Existing legacy 
 ## Publishing Checks
 
 - Release preparation does not authorize `git tag`, `npm publish`, GitHub Release creation, marketplace publication, issue closure, or external issue comments. Perform those only after the maintainer explicitly authorizes publication.
+- npm packages are published as a **manual local step** to the Aliyun private registry: `npm publish --registry=https://registry.anpm.alibaba-inc.com`. The CI release job only verifies the tag (build + test + gates) and creates the GitHub Release; it holds no npm credentials and never publishes.
 - there are no stray `TODO` or `TBD` markers
 - links and referenced paths are still valid
 - no local-only junk files are included

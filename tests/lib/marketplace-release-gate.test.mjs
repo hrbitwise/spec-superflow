@@ -4,25 +4,35 @@ import { readFileSync } from 'node:fs';
 
 const workflow = readFileSync('.github/workflows/ci.yml', 'utf8').replace(/\r\n/g, '\n');
 
-describe('marketplace release check', () => {
-  it('reports marketplace lag without blocking tagged releases', () => {
+describe('release job contract', () => {
+  it('is release-only: tag-gated verification plus GitHub Release, no npm publish', () => {
     const releaseJob = workflow.indexOf('\n  release:\n');
-    const gate = workflow.indexOf('name: Check marketplace sync (advisory)');
     const githubRelease = workflow.indexOf('name: Create GitHub Release');
-    const npmPublish = workflow.indexOf('name: Publish to npm');
 
     assert.ok(releaseJob >= 0, 'workflow must define a release job');
-    assert.ok(gate >= 0, 'release workflow must verify marketplace delivery');
-    assert.ok(gate > releaseJob, 'marketplace verification must remain in the release job');
-    assert.doesNotMatch(workflow.slice(0, releaseJob), /name: Check marketplace sync/);
-    const marketplaceStep = workflow.slice(gate, workflow.indexOf('\n      - name:', gate));
-    assert.match(marketplaceStep, /\n        continue-on-error: true\n/);
-    assert.doesNotMatch(workflow.slice(githubRelease), /continue-on-error: true/);
     assert.match(workflow.slice(releaseJob), /if: startsWith\(github\.ref, 'refs\/tags\/v'\)/);
-    assert.ok(gate < githubRelease, 'marketplace verification must run before GitHub Release creation');
-    assert.ok(gate < npmPublish, 'marketplace verification must run before npm publish');
-    assert.match(workflow, /EXPECTED_VERSION: \$\{\{ github\.ref_name \}\}/);
-    assert.match(workflow, /verify-marketplace-release\.mjs[\s\S]*--expected-version "\$\{EXPECTED_VERSION#v\}"/);
-    assert.match(workflow, /hashgraph-online\/awesome-codex-plugins\/main\/plugins\/MageByte-Zero\/spec-superflow\/\.codex-plugin\/plugin\.json/);
+    assert.ok(githubRelease > releaseJob, 'GitHub Release creation must stay in the release job');
+
+    // npm 包以本地发布至阿里云私有 registry 为准，CI 不持有 npm 凭据。
+    const releaseSection = workflow.slice(releaseJob);
+    assert.doesNotMatch(releaseSection, /name: Publish to npm/, 'CI must not publish to npm');
+    assert.doesNotMatch(workflow, /NPM_TOKEN/, 'CI must not consume an NPM_TOKEN secret');
+    assert.doesNotMatch(releaseSection, /id-token: write/, 'provenance publishing permission is not needed');
+    assert.doesNotMatch(releaseSection, /registry-url: https:\/\/registry\.npmjs\.org/, 'release job must not authenticate against npmjs.org');
   });
+
+  it('keeps the skill ↔ CLI consistency gate inside the release job', () => {
+    const releaseJob = workflow.indexOf('\n  release:\n');
+    const releaseSection = workflow.slice(releaseJob);
+    assert.match(releaseSection, /spec-superflow\.mjs doctor skills/);
+  });
+
+  it('documents the Aliyun private registry as the manual publish channel', () => {
+    assert.match(workflow.slice(Math.max(0, releaseCommentAnchor(workflow) - 200), releaseCommentAnchor(workflow) + 400),
+      /阿里云私有 registry/);
+  });
+
+  function releaseCommentAnchor(text) {
+    return text.indexOf('Release job：npm 包以本地发布');
+  }
 });

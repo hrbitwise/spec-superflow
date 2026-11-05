@@ -61,7 +61,10 @@ describe('Node 20 compatibility contract', () => {
     assert.match(build, /node scripts\/spec-superflow\.mjs doctor/);
     assert.match(build, /node scripts\/spec-superflow\.mjs --version/);
     assert.match(build, /config --get execution\.inlineThreshold/);
-    assert.match(release, /node-version: 22\n          registry-url:/);
+    assert.match(release, /node-version: 22\n          cache: npm/);
+    // Release job 不做 npm 发布（本地手动发布至阿里云私有 registry），不应携带 npm 凭据配置。
+    assert.doesNotMatch(release, /registry-url:/);
+    assert.doesNotMatch(release, /Publish to npm/);
   });
 
   it('keeps project guidance aligned with the Node 20 test command', () => {
