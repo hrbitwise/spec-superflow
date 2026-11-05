@@ -272,6 +272,73 @@ describe('Validator.validateImplementation', () => {
     assert.equal(correctness.status, 'FAIL');
   });
 
+  // 构造最小输入跑 validateImplementation，仅取 Correctness 维度状态
+  function correctnessStatus(diffSummary) {
+    const report = validator.validateImplementation(
+      diffSummary,
+      '### Requirement: Auth middleware\nThe system SHALL authenticate all API requests.',
+      '## Decisions\n### Decision 1\n- Choice: JWT\n- Rationale: stateless'
+    );
+    return report.dimensions.find(d => d.name === 'Correctness').status;
+  }
+
+  it('placeholder 词边界：含标记子串的正常单词 PASS（HACKERONE/HACKATHON/HACKER/XXXX）', () => {
+    // 标记后仍接单词字符时 \b 不成立，正常单词不得误报
+    for (const diff of [
+      'Added integration with the HACKERONE disclosure program',
+      'Joined the internal HACKATHON event',
+      'Fixed the HACKER profile lookup edge case',
+      'Masked the secret value as XXXX in the log output',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'PASS', `expected PASS for: ${diff}`);
+    }
+  });
+
+  it('placeholder 词边界：大写独立标记仍 FAIL（与修复前一致）', () => {
+    for (const diff of [
+      'Added auth middleware. TODO: implement rate limiting',
+      'FIXME: handle the null token branch',
+      'HACK before release',
+      'redacted XXX in the test fixture',
+      'replace the PLACEHOLDER config value',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'FAIL', `expected FAIL for: ${diff}`);
+    }
+  });
+
+  it('placeholder 词边界：小写独立标记 FAIL（大小写不敏感，拦截面增强）', () => {
+    for (const diff of [
+      'will hack this later',
+      '// todo: fix before merge',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'FAIL', `expected FAIL for: ${diff}`);
+    }
+  });
+
+  it('placeholder 词边界：粘连词 TODOX/MYTODO PASS，标点相邻 TODO: remove/(HACK) FAIL', () => {
+    for (const diff of [
+      'Renamed the TODOX helper to pending-list',
+      'removed the MYTODO comment block',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'PASS', `expected PASS for: ${diff}`);
+    }
+    for (const diff of [
+      'TODO: remove dead code',
+      '(HACK) temporary shim',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'FAIL', `expected FAIL for: ${diff}`);
+    }
+  });
+
+  it('placeholder 词边界：标记紧邻 CJK 文字仍 FAIL（ASCII/CJK 交界构成边界）', () => {
+    for (const diff of [
+      'TODO中文待补',
+      'FIXME：修正',
+    ]) {
+      assert.equal(correctnessStatus(diff), 'FAIL', `expected FAIL for: ${diff}`);
+    }
+  });
+
   it('passes when all requirements covered and no placeholders', () => {
     const report = validator.validateImplementation(
       'Added JWT auth middleware in src/middleware/auth.ts, rate limiter in src/middleware/rate-limit.ts',
@@ -311,6 +378,73 @@ describe('Validator.validateImplementation', () => {
     const completeness = report.dimensions.find(d => d.name === 'Completeness');
     assert.equal(completeness.status, 'FAIL');
     assert.ok(completeness.findings.some(f => f.message.includes('速率限制')));
+  });
+
+  // W2：三种需求头（### Requirement: / ### 需求： / ### REQ-ID:）统一提取，
+  // 围栏内示例不提取；0 真实需求头时 Completeness 空集 WARN + CONDITIONAL。
+
+  it('需求头提取：中文/REQ-ID/标准三种头缺实现时均产生 CRITICAL', () => {
+    const report = validator.validateImplementation(
+      '重构缓存层 src/cache.ts',
+      [
+        '### 需求：速率限制',
+        '系统必须限制请求频率。',
+        '',
+        '### REQ-AUTH-001: 令牌校验',
+        '系统必须校验访问令牌。',
+        '',
+        '### Requirement: Audit logging',
+        'The system SHALL write audit logs.',
+      ].join('\n'),
+      '## Decisions\n本节无决策条目'
+    );
+    const completeness = report.dimensions.find(d => d.name === 'Completeness');
+    assert.equal(completeness.status, 'FAIL');
+    assert.equal(completeness.findings.length, 3);
+    assert.ok(completeness.findings.every(f => f.level === 'CRITICAL'));
+    assert.ok(completeness.findings.some(f => f.message.includes('速率限制')));
+    assert.ok(completeness.findings.some(f => f.message.includes('REQ-AUTH-001: 令牌校验')));
+    assert.ok(completeness.findings.some(f => f.message.includes('Audit logging')));
+    assert.equal(report.verdict, 'FAIL');
+  });
+
+  it('需求头提取：围栏内需求示例不提取，0 真实头 → Completeness WARN、verdict CONDITIONAL', () => {
+    const specContent = [
+      '# 某规格说明',
+      '',
+      '以下仅为示例：',
+      '',
+      '```markdown',
+      '### Requirement: 示例需求',
+      '这里是围栏内的示例内容。',
+      '```',
+      '',
+      '围栏外不存在真实需求头。',
+    ].join('\n');
+    const report = validator.validateImplementation(
+      '重构缓存层 src/cache.ts',
+      specContent,
+      '## Decisions\n本节无决策条目'
+    );
+    const completeness = report.dimensions.find(d => d.name === 'Completeness');
+    assert.equal(completeness.status, 'WARN');
+    assert.equal(completeness.findings.length, 1);
+    assert.equal(completeness.findings[0].level, 'WARN');
+    assert.ok(completeness.findings[0].message.includes('No verifiable requirement headers'));
+    assert.ok(!completeness.findings.some(f => f.message.includes('示例需求')));
+    assert.equal(report.verdict, 'CONDITIONAL');
+  });
+
+  it('需求头提取：标准 Requirement 头全覆盖时 PASS 路径不变', () => {
+    const report = validator.validateImplementation(
+      'Added rate limiting middleware in src/middleware/rate-limit.ts',
+      '### Requirement: Rate limiting\nThe system SHALL limit requests to 100 per minute.',
+      '## Decisions\n本节无决策条目'
+    );
+    const completeness = report.dimensions.find(d => d.name === 'Completeness');
+    assert.equal(completeness.status, 'PASS');
+    assert.equal(completeness.findings.length, 0);
+    assert.equal(report.verdict, 'PASS');
   });
 });
 

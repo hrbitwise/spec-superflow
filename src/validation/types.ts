@@ -21,7 +21,8 @@ export type VerificationDimension = 'Completeness' | 'Correctness' | 'Coherence'
 export type VerificationStatus = 'PASS' | 'FAIL' | 'WARN';
 
 export interface VerificationFinding {
-  level: 'CRITICAL' | 'IMPORTANT' | 'INFO';
+  // WARN 用于空集等"工件需人工复核"级别的发现（见 D4），维度状态随之取 WARN
+  level: 'CRITICAL' | 'IMPORTANT' | 'WARN' | 'INFO';
   dimension: VerificationDimension;
   message: string;
 }

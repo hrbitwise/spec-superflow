@@ -37,6 +37,8 @@ Present 2-3 options when reasonable answers are finite. This reduces cognitive l
 
 For each approach: what it is, upside, downside, best-for. Then **recommend one** and explain why. Never present a single path — always name at least one alternative.
 
+Approaches not chosen during comparison, or candidate directions excluded through clarification, must be recorded in the proposal's "已排除的替代方案（Rejected Alternatives）" section — two lines per entry: one-sentence description + exclusion reason (citing the clarification conclusion or constraint). Cap the list at 5 entries; beyond that is a scope-drift signal requiring re-examination of the need, not more entries. The section is optional in the template and appears only when real exclusions exist.
+
 ### 5. Finish with a concrete scope
 
 Summarize the problem, scope, non-goals, success criteria and decomposition decision for spec-writer. Reuse decisions already supplied by the user. Resolve missing material decisions, then hand off to spec-writer to draft proposal.md and tasks.md together; the concrete plan has one approval, handled by workflow-start. Exploration does not create a separate approval receipt.

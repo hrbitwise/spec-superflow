@@ -1,6 +1,6 @@
 import { MIN_PURPOSE_LENGTH, MIN_WHY_SECTION_LENGTH, MAX_WHY_SECTION_LENGTH, MAX_REQUIREMENT_TEXT_LENGTH, MAX_DELTAS_PER_CHANGE, VALIDATION_MESSAGES, VERIFICATION_MESSAGES, } from './constants.js';
 import { tokenize } from './tokenizer.js';
-import { parseDeltaSpec, normalizeRequirementName, extractRequirementsSection, scanMarkdownLines, extractScenarios, validateScenarioIds, extractTaskCovers, } from '../parsing/requirement-blocks.js';
+import { parseDeltaSpec, normalizeRequirementName, extractRequirementsSection, scanMarkdownLines, REQUIREMENT_HEADER_REGEX, extractScenarios, validateScenarioIds, extractTaskCovers, } from '../parsing/requirement-blocks.js';
 const SCENARIO_HEADER_REGEX = /^####\s+Scenario:/i;
 function normalizeLineEndings(content) {
     return content.replace(/\r\n?/g, '\n');
@@ -23,6 +23,51 @@ function extractSection(content, heading) {
         }
     }
     return lines.slice(idx + 1, endIdx).join('\n').trim();
+}
+/**
+ * 校验 proposal 的 Rejected Alternatives 节内容。
+ * 解析 bullet 格式：`- **名称**：<描述>——排除理由：<理由>`
+ * 返回：每项的 ERROR 问题（缺描述/缺排除理由）与条目总数。
+ * 条目数超限的 WARNING 由调用方（validateChangeContent）统一追加。
+ */
+function validateRejectedAlternativesSection(section) {
+    const issues = [];
+    const REJECTED_BULLET_REGEX = /^-\s+\*\*(.+?)\*\*：(.+?)——排除理由：(.+)$/;
+    let count = 0;
+    for (const rawLine of section.split('\n')) {
+        const line = rawLine.trim();
+        if (!line)
+            continue;
+        if (!line.startsWith('-'))
+            continue;
+        count++;
+        const match = line.match(REJECTED_BULLET_REGEX);
+        if (!match) {
+            issues.push({
+                level: 'ERROR',
+                path: 'rejectedAlternatives',
+                message: `[rejected-alt] 条目格式不合法（期望 \`- **名称**：描述——排除理由：理由\`）：${line.slice(0, 60)}`,
+            });
+            continue;
+        }
+        const description = match[2]?.trim();
+        const reason = match[3]?.trim();
+        if (!description) {
+            issues.push({
+                level: 'ERROR',
+                path: 'rejectedAlternatives',
+                message: `[rejected-alt] 条目 "**${match[1]}**" 缺失描述（——前须有描述文字）`,
+            });
+        }
+        if (!reason) {
+            issues.push({
+                level: 'ERROR',
+                path: 'rejectedAlternatives',
+                message: `[rejected-alt] 条目 "**${match[1]}**" 缺失排除理由（——排除理由：后须有理由文字）`,
+            });
+        }
+    }
+    return { rejectedIssues: issues, count };
 }
 function containsShallOrMust(text) {
     return /\b(SHALL|MUST)\b/.test(text);
@@ -201,6 +246,21 @@ export class Validator {
                 path: 'whatChanges',
                 message: VALIDATION_MESSAGES.CHANGE_WHAT_EMPTY,
             });
+        }
+        // Rejected Alternatives 节（可选）校验：每项须同时包含描述与排除理由，
+        // 条目数上限 5 条（超出视为需求漂移信号，报 WARNING）。
+        const rejectedSection = extractSection(content, 'Rejected');
+        if (rejectedSection !== undefined) {
+            const { rejectedIssues, count } = validateRejectedAlternativesSection(rejectedSection);
+            for (const issue of rejectedIssues)
+                issues.push(issue);
+            if (count > 5) {
+                issues.push({
+                    level: 'WARNING',
+                    path: 'rejectedAlternatives',
+                    message: `[rejected-alt] 条目数 ${count} 超过上限 5（需求漂移信号，应重审需求而非继续登记）`,
+                });
+            }
         }
         return createReport(issues, this.strictMode);
     }
@@ -401,6 +461,16 @@ export class Validator {
                 });
             }
         }
+        if (requirements.length === 0) {
+            // 空集不做真空 PASS：未找到任何可校验需求头意味着工件可能无法解析（D4），
+            // 输出 WARN 交人复核。维度状态沿用既有公式——无 CRITICAL 但 findings
+            // 非空即 WARN；总体 verdict 随之自动推导为 CONDITIONAL，阻止自动绿灯。
+            completenessFindings.push({
+                level: 'WARN',
+                dimension: 'Completeness',
+                message: 'No verifiable requirement headers found in spec (expected ### Requirement: / ### 需求： / ### REQ-...)',
+            });
+        }
         dimensions.push({
             name: 'Completeness',
             status: completenessFindings.some(f => f.level === 'CRITICAL') ? 'FAIL' : completenessFindings.length > 0 ? 'WARN' : 'PASS',
@@ -408,16 +478,20 @@ export class Validator {
         });
         // --- Correctness ---
         const correctnessFindings = [];
-        const placeholderPatterns = ['TODO', 'FIXME', 'HACK', 'XXX', 'PLACEHOLDER'];
-        for (const pattern of placeholderPatterns) {
-            if (diffSummary.includes(pattern)) {
-                correctnessFindings.push({
-                    level: 'CRITICAL',
-                    dimension: 'Correctness',
-                    message: VERIFICATION_MESSAGES.VERIFICATION_PLACEHOLDER_DETECTED,
-                });
-                break;
-            }
+        // 使用 \b 词边界匹配占位符标记：标记两侧必须为单词字符（[A-Za-z0-9_]）
+        // 与非单词字符的交界，避免 HACKERONE/HACKATHON/HACKER/XXXX/TODOX/MYTODO
+        // 等仅含标记子串的正常单词被误报（裸 includes 会误命中这些词）。
+        // i 标志使检测大小写不敏感：修复前仅大写被拦截，修复后小写独立标记
+        // （如 hack this、// todo: fix）同样 FAIL，拦截面只增不减。
+        // CJK 字符不属于 \w，故 ASCII 标记与中日韩文字交界（如 TODO中文待补）
+        // 同样构成词边界，标记仍被检出。
+        const PLACEHOLDER_PATTERN = /\b(TODO|FIXME|HACK|XXX|PLACEHOLDER)\b/i;
+        if (PLACEHOLDER_PATTERN.test(diffSummary)) {
+            correctnessFindings.push({
+                level: 'CRITICAL',
+                dimension: 'Correctness',
+                message: VERIFICATION_MESSAGES.VERIFICATION_PLACEHOLDER_DETECTED,
+            });
         }
         dimensions.push({
             name: 'Correctness',
@@ -451,12 +525,20 @@ export class Validator {
         const verdict = hasCritical ? 'FAIL' : hasWarning ? 'CONDITIONAL' : 'PASS';
         return { dimensions, verdict };
     }
+    // 提取 spec 中围栏外的全部需求头名称：遍历 scanMarkdownLines 的行结构，
+    // 跳过代码围栏内文本（围栏内示例标题 MUST NOT 提取），对非围栏行匹配统一的
+    // REQUIREMENT_HEADER_REGEX。捕获组口径与 requirement-blocks 的
+    // requirementName() 完全一致：标准 Requirement: 与中文 需求： 头取组 1
+    // （冒号后文本），REQ-...: 头取组 2（完整头文本）。
     extractRequirementNames(specContent) {
-        const regex = /### Requirement:\s*(.+)/g;
         const names = [];
-        let match;
-        while ((match = regex.exec(specContent)) !== null) {
-            names.push(match[1].trim());
+        for (const { text, fenced } of scanMarkdownLines(specContent)) {
+            if (fenced)
+                continue;
+            const match = text.match(REQUIREMENT_HEADER_REGEX);
+            if (match) {
+                names.push(normalizeRequirementName(match[1] ?? match[2]));
+            }
         }
         return names;
     }

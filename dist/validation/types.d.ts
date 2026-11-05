@@ -17,7 +17,7 @@ export interface ValidationReport {
 export type VerificationDimension = 'Completeness' | 'Correctness' | 'Coherence';
 export type VerificationStatus = 'PASS' | 'FAIL' | 'WARN';
 export interface VerificationFinding {
-    level: 'CRITICAL' | 'IMPORTANT' | 'INFO';
+    level: 'CRITICAL' | 'IMPORTANT' | 'WARN' | 'INFO';
     dimension: VerificationDimension;
     message: string;
 }

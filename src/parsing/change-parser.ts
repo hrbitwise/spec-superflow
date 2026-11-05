@@ -1,3 +1,5 @@
+import { scanMarkdownLines } from './requirement-blocks.js';
+
 export interface ParsedDelta {
   spec: string;
   operation: string;
@@ -11,31 +13,36 @@ export interface ParsedChange {
   deltas: ParsedDelta[];
 }
 
-function normalizeLineEndings(content: string): string {
-  return content.replace(/\r\n?/g, '\n');
-}
+// 围栏开闭标记行（```/~~~）在结构中标记为非围栏，收集正文时需一并排除。
+const FENCE_MARKER_REGEX = /^ {0,3}(?:`{3,}|~{3,})/;
 
+// 围栏感知章节提取：仅非围栏行可作为标题，正文排除围栏行与围栏标记，
+// 章节结束于下一个非围栏二级标题。
 function extractSection(content: string, heading: string): string {
-  const normalized = normalizeLineEndings(content);
-  const lines = normalized.split('\n');
-  // Match headings that contain the English keyword — supports both
-  // "## Why" and "## 背景（Why）" style bilingual headings.
+  const structure = scanMarkdownLines(content);
+  // 标题正则沿用旧规则，兼容 "## Why" 与 "## 背景（Why）" 双语形式。
   const headingRegex = new RegExp(
     `^##\\s+.*\\b${heading.replace(/\s+/g, '\\s+')}\\b.*$`,
     'i'
   );
-  const idx = lines.findIndex((l) => headingRegex.test(l));
+  const idx = structure.findIndex(
+    ({ text, fenced }) => !fenced && headingRegex.test(text)
+  );
   if (idx === -1) return '';
 
-  let endIdx = lines.length;
-  for (let i = idx + 1; i < lines.length; i++) {
-    if (/^##\s+/.test(lines[i])) {
+  let endIdx = structure.length;
+  for (let i = idx + 1; i < structure.length; i++) {
+    if (!structure[i].fenced && /^##\s+/.test(structure[i].text)) {
       endIdx = i;
       break;
     }
   }
 
-  return lines.slice(idx + 1, endIdx).join('\n').trim();
+  const body = structure
+    .slice(idx + 1, endIdx)
+    .filter(({ text, fenced }) => !fenced && !FENCE_MARKER_REGEX.test(text))
+    .map(({ text }) => text);
+  return body.join('\n').trim();
 }
 
 export function parseChangeMarkdown(
@@ -48,26 +55,33 @@ export function parseChangeMarkdown(
   const deltas: ParsedDelta[] = [];
 
   const deltaSectionRegex =
-    /^##\s+(ADDED|MODIFIED|REMOVED|RENAMED)\s+Requirements\s*$/im;
+    /^##\s+(ADDED|MODIFIED|REMOVED|RENAMED)\s+Requirements\s*$/i;
 
-  const sections = content.split(/(?=^##\s)/m);
-  for (const section of sections) {
-    const match = section.match(deltaSectionRegex);
-    if (match) {
-      const operation = match[1].toUpperCase();
-      const body = section.substring(match[0].length).trim();
-      const descLines: string[] = [];
-      for (const line of body.split('\n')) {
-        if (/^###\s+/.test(line)) break;
-        const trimmed = line.trim();
-        if (trimmed) descLines.push(trimmed);
-      }
-      deltas.push({
-        spec: '',
-        operation,
-        description: descLines.join('\n'),
-      });
+  // 围栏感知 delta 扫描：仅非围栏行匹配节头，围栏内标题不产生幻影 delta。
+  const structure = scanMarkdownLines(content);
+  for (let i = 0; i < structure.length; i++) {
+    if (structure[i].fenced) continue;
+    const match = structure[i].text.match(deltaSectionRegex);
+    if (!match) continue;
+
+    const operation = match[1].toUpperCase();
+    const descLines: string[] = [];
+    // 向下收集非围栏行：遇下一个非围栏二级标题或三级标题即止，
+    // 空行跳过、其余 trim 后保留——与修复前 break/trim 规则一致。
+    for (let j = i + 1; j < structure.length; j++) {
+      const { text, fenced } = structure[j];
+      if (!fenced && /^##\s+/.test(text)) break;
+      if (fenced || FENCE_MARKER_REGEX.test(text)) continue;
+      if (/^###\s+/.test(text)) break;
+      const trimmed = text.trim();
+      if (trimmed) descLines.push(trimmed);
     }
+
+    deltas.push({
+      spec: '',
+      operation,
+      description: descLines.join('\n'),
+    });
   }
 
   return {
