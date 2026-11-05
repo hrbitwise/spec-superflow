@@ -57,7 +57,7 @@ Scientific method: form a single hypothesis ("I think X is the root cause becaus
 1. **Create failing test case** — simplest reproduction, automated if possible. Follow TDD rules from build-executor
 2. **Implement single fix** — address root cause, one change at a time, no "while I'm here" improvements
 3. **Verify fix** — test passes? no regressions? issue resolved?
-4. **If the fix fails**: preserve the evidence, return to Phase 1 and form a new hypothesis. Repeated failures of the same unresolved issue require a concrete decision; unrelated issues do not share an attempt budget.
+4. **If the fix fails**: preserve the evidence, return to Phase 1 and form a new hypothesis. Escalation to a user decision requires at least three distinct evidence-backed failed attempts on the same unresolved issue; unrelated issues do not share an attempt budget.
 
 ## Completion
 

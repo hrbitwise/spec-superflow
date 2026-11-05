@@ -28,6 +28,8 @@ jobs:
       - run: npm test
       - name: Check version consistency
         run: node scripts/check-version-consistency.mjs
+      - name: Skill ↔ CLI consistency gate
+        run: node scripts/spec-superflow.mjs doctor skills
       - name: CLI smoke
         run: |
           node scripts/spec-superflow.mjs doctor

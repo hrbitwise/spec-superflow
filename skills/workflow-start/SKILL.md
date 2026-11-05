@@ -15,6 +15,8 @@ A new request follows this file without loading legacy instructions. For an exis
 
 Use only for an explicit spec-superflow request or an existing change. Ordinary coding does not require a spec workflow.
 
+Legacy changes advance through the recorded state machine — exploring, specifying, bridging, approved-for-build, executing, debugging, closing, abandoned — with guarded transitions; the full table is in `SSF runtime asset read docs/state-machine.md`.
+
 ## Resume
 
 Run `SSF resume <change-dir> --json` once. It combines state, handoffs, checkpoints and current-plan inspection. Use the returned absolute `change.path` for all subsequent operations: recovery may redirect a stale source copy into its recorded worktree. Follow `next_action`; do not repeat all component commands unless diagnosing that result. A blocked continuation is not a retry instruction; resolve its named cause before running it again. Read only the artifacts relevant to the next action.

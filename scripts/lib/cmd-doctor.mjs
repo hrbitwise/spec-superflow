@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadConfig } from './config-loader.mjs';
 import { PLATFORM_RUNTIME_INVENTORY } from './platform-runtime-inventory.mjs';
+import { checkSkillConsistency } from './skill-consistency.mjs';
 
 const RUNTIME_SKILLS = new Set([
   'workflow-start', 'need-explorer', 'spec-writer', 'contract-builder',
@@ -220,7 +221,31 @@ function checkDocs(root) {
   return { pass: false, message: warnings.join('; ') };
 }
 
+/**
+ * 聚焦检查 `ssf doctor skills`：逐条列出 skill 文档与 CLI 的不一致，
+ * 存在任何问题时返回退出码 1，可直接用于 CI。
+ */
+function runSkillsCheck(root) {
+  const result = checkSkillConsistency(root);
+  console.log('spec-superflow doctor skills:\n');
+  if (result.pass) {
+    console.log(`✅ ${result.message}`);
+    return { exitCode: 0 };
+  }
+  for (const issue of result.issues) {
+    const location = issue.line > 0 ? `${issue.file}:${issue.line}` : issue.file;
+    console.log(`✖ ${location}  [${issue.kind}]\n    ${issue.detail}`);
+  }
+  console.log(`\n⚠️  ${result.message}`);
+  return { exitCode: 1 };
+}
+
 export async function run(args) {
+  // 聚焦子命令：ssf doctor skills
+  if (Array.isArray(args) && args[0] === 'skills') {
+    return runSkillsCheck(process.cwd());
+  }
+
   const root = process.cwd();
   const config = loadConfig(root);
 
@@ -232,6 +257,7 @@ export async function run(args) {
     ['Hooks', checkHooks(root)],
     ['Codex manifest', checkCodexManifest(root)],
     ['Skills', checkSkills(root)],
+    ['Skill ↔ CLI consistency', checkSkillConsistency(root)],
     ['Runtime distribution', checkRuntimeDistribution(root)],
     ['dist/', checkDist(root)],
     ['Node.js', checkNodeVersion()],
@@ -268,4 +294,4 @@ export async function run(args) {
   return { exitCode: hasFailure ? 1 : 0 };
 }
 
-export { checkVersionConsistency, checkHooks, checkCodexManifest, checkSkills, checkRuntimeDistribution, checkDist, checkRootPluginAuthor, checkNodeVersion, checkDocs };
+export { checkVersionConsistency, checkHooks, checkCodexManifest, checkSkills, checkRuntimeDistribution, checkDist, checkRootPluginAuthor, checkNodeVersion, checkDocs, checkSkillConsistency };

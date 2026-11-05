@@ -17,7 +17,8 @@ const REVIEW_STATUSES = new Set(['pass', 'fail']);
 // commit contained only by these branches means the work was committed straight
 // onto the trunk instead of through an isolate-created branch.
 const PROTECTED_BRANCHES = new Set(['main', 'master']);
-const MAX_REPAIR_FAILURES = 3;
+// 导出供 skill-consistency 阈值契约直接引用引擎常量，避免检查器维护第二份数字。
+export const MAX_REPAIR_FAILURES = 3;
 const FULL_COMMIT_SHA = /^[0-9a-f]{40}$/i;
 const defaultGitRangeValidator = createGitRangeValidator();
 
