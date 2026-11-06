@@ -1,10 +1,16 @@
 // ssf doctor — health check for spec-superflow installation and project
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config-loader.mjs';
 import { PLATFORM_RUNTIME_INVENTORY } from './platform-runtime-inventory.mjs';
 import { checkSkillConsistency } from './skill-consistency.mjs';
 import { checkVaultDrift, DEFAULT_MIRROR_DIR } from './vault-drift.mjs';
+
+// 包根定位：npm install 后从 node_modules/spec-superflow/scripts/lib/cmd-doctor.mjs 回溯两层即包根
+// git clone 场景下 __dirname 也是 scripts/lib，同样回溯两层
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PKG_ROOT = resolve(__dirname, '..', '..');
 
 const RUNTIME_SKILLS = new Set([
   'workflow-start', 'need-explorer', 'spec-writer', 'contract-builder',
@@ -226,8 +232,8 @@ function checkDocs(root) {
  * 聚焦检查 `ssf doctor skills`：逐条列出 skill 文档与 CLI 的不一致，
  * 存在任何问题时返回退出码 1，可直接用于 CI。
  */
-function runSkillsCheck(root) {
-  const result = checkSkillConsistency(root);
+function runSkillsCheck() {
+  const result = checkSkillConsistency(PKG_ROOT);
   console.log('spec-superflow doctor skills:\n');
   if (result.pass) {
     console.log(`✅ ${result.message}`);
@@ -270,7 +276,7 @@ function parseVaultArgs(args) {
  * vault 根定位顺序：--vault-root flag → spec-superflow.config.json 的 knowledgeVault.root。
  * 退出码：0 无阻断性漂移；1 检出漂移或检查无法执行（vault/MOC 缺失）；2 参数或配置用法错误。
  */
-function runVaultCheck(root, args) {
+function runVaultCheck(args) {
   const { values, error } = parseVaultArgs(args);
   if (error) {
     console.error(`spec-superflow doctor vault: ${error}`);
@@ -278,7 +284,7 @@ function runVaultCheck(root, args) {
     return { exitCode: 2 };
   }
 
-  const config = loadConfig(root);
+  const config = loadConfig(process.cwd());
   const vaultRoot = values.vaultRoot || config.knowledgeVault?.root || null;
   if (!vaultRoot) {
     console.error('spec-superflow doctor vault: vault root is required.');
@@ -286,7 +292,7 @@ function runVaultCheck(root, args) {
     return { exitCode: 2 };
   }
   const moc = values.moc || config.knowledgeVault?.moc || null;
-  const result = checkVaultDrift(root, vaultRoot, {
+  const result = checkVaultDrift(PKG_ROOT, vaultRoot, {
     moc,
     mirrorDir: values.mirrorDir,
     strict: values.strict,
@@ -327,16 +333,16 @@ function runVaultCheck(root, args) {
 export async function run(args) {
   // 聚焦子命令：ssf doctor skills
   if (Array.isArray(args) && args[0] === 'skills') {
-    return runSkillsCheck(process.cwd());
+    return runSkillsCheck();
   }
 
   // 聚焦子命令：ssf doctor vault（外部 Obsidian vault 漂移检查）
   if (Array.isArray(args) && args[0] === 'vault') {
-    return runVaultCheck(process.cwd(), args.slice(1));
+    return runVaultCheck(args.slice(1));
   }
 
-  const root = process.cwd();
-  const config = loadConfig(root);
+  const root = PKG_ROOT;
+  const config = loadConfig(process.cwd());
 
   console.log('spec-superflow doctor:\n');
 
@@ -353,8 +359,8 @@ export async function run(args) {
     ['Docs', checkDocs(root)],
   ];
 
-  // Config check
-  const configPath = join(root, 'spec-superflow.config.json');
+  // Config check（用户项目 cwd 下，不是包根）
+  const configPath = join(process.cwd(), 'spec-superflow.config.json');
   if (existsSync(configPath)) {
     try {
       JSON.parse(readFileSync(configPath, 'utf-8'));
