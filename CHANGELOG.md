@@ -6,6 +6,12 @@ The format loosely follows Keep a Changelog.
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-11-06
+
+### Fixed
+
+- **`ssf doctor` root resolution**: the full doctor command previously used `process.cwd()` as the package root for all checks. That happened to work in a git-clone workspace (cwd is the package root) but failed after `npm install spec-superflow` — the installed CLI could not find `scripts/spec-superflow.mjs` at `<cwd>/scripts/` because it lives at `node_modules/spec-superflow/scripts/`. Introduced a `__dirname`-based `PKG_ROOT` and routed package-self checks (version consistency, skill-CLI consistency, dist, docs, runtime distribution) through it, while keeping the user-project Config check on `process.cwd()`. Version 2.2.1 is npm-only; the GitHub Release stays on 2.2.0.
+
 ## [2.2.0] - 2026-11-05
 
 Upgrade based on upstream v2.1.0, porting the v1.5 fork's unique capabilities back so this line is a strict superset of upstream v2. All ports are re-adapted to the v2 model (Direct / Planned paths, opt-in guard, schema v2 execution plans).
